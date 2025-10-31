@@ -3,37 +3,24 @@ import PageWrapper from '../components/PageWrapper';
 import { motion } from 'framer-motion';
 import { AdminContext } from '../contexts/AdminContext';
 import { FiMail, FiPhone, FiMapPin, FiFacebook, FiLinkedin } from 'react-icons/fi';
-import { addMessage } from '../supabaseClient';
 
 const Contact: React.FC = () => {
-  const { settings, refetchAllData } = useContext(AdminContext)!;
+  const { settings, setMessages } = useContext(AdminContext)!;
   const contactDetails = settings.contactDetails;
   
   const [formData, setFormData] = useState({ name: '', email: '', message: '' });
   const [isSubmitted, setIsSubmitted] = useState(false);
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const [error, setError] = useState('');
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    setIsSubmitting(true);
-    setError('');
-    try {
-        await addMessage(formData);
-        await refetchAllData(); // Refetch messages for admin panel
-        setIsSubmitted(true);
-        setFormData({ name: '', email: '', message: '' });
-        setTimeout(() => setIsSubmitted(false), 5000);
-    } catch (err) {
-        setError('Failed to send message. Please try again later.');
-        console.error(err);
-    } finally {
-        setIsSubmitting(false);
-    }
+    setMessages(prev => [...prev, { ...formData, id: Date.now().toString(), timestamp: new Date().toISOString(), read: false }]);
+    setIsSubmitted(true);
+    setFormData({ name: '', email: '', message: '' });
+    setTimeout(() => setIsSubmitted(false), 5000);
   };
 
   const contactItems = [
@@ -98,14 +85,13 @@ const Contact: React.FC = () => {
               </div>
               <div>
                 <button
-                  type="submit" disabled={isSubmitting}
-                  className="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-primary-accent hover:bg-opacity-80 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-accent transition-all disabled:bg-gray-500 disabled:cursor-not-allowed"
+                  type="submit"
+                  className="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-primary-accent hover:bg-opacity-80 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-accent transition-all"
                 >
-                  {isSubmitting ? 'Sending...' : 'Send Message'}
+                  Send Message
                 </button>
               </div>
               {isSubmitted && <p className="text-green-400 text-center mt-4">Thank you for your message! I'll get back to you soon.</p>}
-              {error && <p className="text-red-500 text-center mt-4">{error}</p>}
             </form>
         </div>
       </div>

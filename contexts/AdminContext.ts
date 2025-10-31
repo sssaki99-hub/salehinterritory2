@@ -7,12 +7,17 @@ interface AdminContextType {
   settings: AdminSettings;
   setSettings: Dispatch<SetStateAction<AdminSettings>>;
   projects: Project[];
+  setProjects: Dispatch<SetStateAction<Project[]>>;
   writings: Writing[];
+  setWritings: Dispatch<SetStateAction<Writing[]>>;
   workExperience: WorkExperience[];
+  setWorkExperience: Dispatch<SetStateAction<WorkExperience[]>>;
   education: Education[];
+  setEducation: Dispatch<SetStateAction<Education[]>>;
   certificates: Certificate[];
+  setCertificates: Dispatch<SetStateAction<Certificate[]>>;
   messages: Message[];
-  refetchAllData: () => Promise<void>;
+  setMessages: Dispatch<SetStateAction<Message[]>>;
 }
 
 export const AdminContext = createContext<AdminContextType | null>(null);

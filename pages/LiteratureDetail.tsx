@@ -5,13 +5,12 @@ import { AdminContext } from '../contexts/AdminContext';
 import CommentSection from '../components/CommentSection';
 import { Comment, Rating, WritingCategory, Episode } from '../types';
 import { FiChevronLeft, FiChevronRight, FiZoomIn, FiZoomOut } from 'react-icons/fi';
-import { addComment, addRating } from '../supabaseClient';
 
 type FontSize = 'text-base' | 'text-lg' | 'text-xl';
 
 const LiteratureDetail: React.FC = () => {
   const { id } = useParams<{ id: string }>();
-  const { writings, refetchAllData } = useContext(AdminContext)!;
+  const { writings, setWritings } = useContext(AdminContext)!;
   
   const story = writings.find(w => w.id === id);
   
@@ -34,24 +33,21 @@ const LiteratureDetail: React.FC = () => {
 
   const handleCommentSubmit = async (newComment: Omit<Comment, 'id' | 'timestamp'>) => {
     if (!story) return;
-    try {
-        await addComment(newComment, story.id, 'writing');
-        await refetchAllData();
-    } catch (error) {
-        console.error("Failed to submit comment:", error);
-        alert("Sorry, there was an error posting your comment.");
-    }
+     const commentToAdd: Comment = {
+        ...newComment,
+        id: Date.now().toString(),
+        timestamp: new Date().toISOString()
+    };
+    setWritings(prev => prev.map(w => 
+        w.id === story.id ? { ...w, comments: [...w.comments, commentToAdd] } : w
+    ));
   };
   
   const handleRatingSubmit = async (newRating: Rating) => {
     if (!story) return;
-    try {
-        await addRating(newRating, story.id, 'writing');
-        await refetchAllData();
-    } catch (error) {
-        console.error("Failed to submit rating:", error);
-        alert("Sorry, there was an error submitting your rating.");
-    }
+    setWritings(prev => prev.map(w => 
+        w.id === story.id ? { ...w, ratings: [...w.ratings, newRating] } : w
+    ));
   };
   
   const fontSizes: FontSize[] = ['text-base', 'text-lg', 'text-xl'];
