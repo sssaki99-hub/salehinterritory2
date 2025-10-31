@@ -2,7 +2,7 @@ import React, { useState, useContext, ChangeEvent, FormEvent } from 'react';
 import PageWrapper from '../components/PageWrapper';
 import { AdminContext } from '../contexts/AdminContext';
 import { Project, Writing, WorkExperience, Education, Certificate, WritingGenre, WritingCategory, Episode, AdminSettings } from '../types';
-import { FiLogOut } from 'react-icons/fi';
+import { FiLogOut, FiTrash2 } from 'react-icons/fi';
 import {
     signInAdmin, signOutAdmin, updateUserPassword,
     addProject, updateProject, deleteProject,
@@ -14,7 +14,7 @@ import {
     updateSettings, uploadFile
 } from '../supabaseClient';
 
-type AdminTab = 'Dashboard' | 'Inbox' | 'Settings' | 'Projects' | 'Literature' | 'Professional';
+type AdminTab = 'Projects' | 'Literature' | 'Professional' | 'Inbox' | 'Settings';
 
 const FormField: React.FC<{label: string, name: string, value: any, onChange: (e: ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => void, type?: string, required?: boolean, rows?: number, options?: string[], autoComplete?: string}> =
 ({label, name, value, onChange, type = 'text', required = true, rows, options, autoComplete = 'off'}) => (
@@ -56,7 +56,10 @@ const CrudSection: React.FC<{ title: string; items: any[]; onDelete: (id: string
 );
 
 const AdminDashboard = () => {
-    const { settings, setSettings, refetchAllData, messages, projects, writings, workExperience, education, certificates } = useContext(AdminContext)!;
+    const adminContext = useContext(AdminContext);
+    if (!adminContext) return null;
+    const { settings, setSettings, refetchAllData, messages, projects, writings, workExperience, education, certificates } = adminContext;
+    
     const [activeTab, setActiveTab] = useState<AdminTab>('Projects');
     const [isSubmitting, setIsSubmitting] = useState(false);
     
@@ -68,7 +71,6 @@ const AdminDashboard = () => {
     const [currentSettings, setCurrentSettings] = useState<AdminSettings>(settings);
     const [passwordFields, setPasswordFields] = useState({ newPassword: '', confirmPassword: '' });
     const [passwordMessage, setPasswordMessage] = useState({ type: '', text: '' });
-
 
     const handleFormChange = (e: ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>, setter: React.Dispatch<React.SetStateAction<any>>) => {
         setter((prev: any) => ({ ...(prev || {}), [e.target.name]: e.target.value }));
@@ -93,7 +95,7 @@ const AdminDashboard = () => {
         } catch (error) { console.error(`Failed to delete ${type}:`, error); alert(`Error: Could not delete ${type}.`); }
         finally { setIsSubmitting(false); }
     };
-
+    
     const handleFileUpload = async (e: ChangeEvent<HTMLInputElement>, bucket: string, setter: React.Dispatch<React.SetStateAction<any>>, fieldName: string, isMultiple = false) => {
         const files = e.target.files;
         if (!files || files.length === 0) return;
@@ -104,7 +106,22 @@ const AdminDashboard = () => {
                 setter((prev: any) => ({ ...prev, [fieldName]: [...(prev[fieldName] || []), ...urls] }));
             } else {
                 const url = await uploadFile(bucket, files[0]);
-                setter((prev: any) => ({ ...prev, [fieldName]: url }));
+                const keys = fieldName.split('.');
+
+                if (keys.length > 1) {
+                    setter((prev: any) => {
+                        const newState = { ...prev };
+                        let current = newState;
+                        for (let i = 0; i < keys.length - 1; i++) {
+                            current[keys[i]] = { ...current[keys[i]] };
+                            current = current[keys[i]];
+                        }
+                        current[keys[keys.length - 1]] = url;
+                        return newState;
+                    });
+                } else {
+                    setter((prev: any) => ({ ...prev, [fieldName]: url }));
+                }
             }
         } catch (error) { console.error("File upload failed:", error); alert("File upload failed."); }
         finally { setIsSubmitting(false); }
@@ -123,7 +140,7 @@ const AdminDashboard = () => {
              setCurrentSettings(prev => ({ ...prev, [name]: isCheckbox ? checkedValue : value }));
         }
     };
-
+    
     const saveSettings = async () => {
         setIsSubmitting(true);
         try {
@@ -160,10 +177,6 @@ const AdminDashboard = () => {
         e.preventDefault();
         if (!editingWorkExperience) return;
         
-        // FIX: The form treats the 'description' field (an array of strings) as a single string
-        // in the textarea. This causes a type mismatch that TypeScript correctly identifies as an error.
-        // We cast to `unknown` to bypass the compile-time check and handle the string at runtime,
-        // safely converting it back to a string array.
         const finalExp = {
             ...editingWorkExperience,
             description: typeof (editingWorkExperience.description as unknown) === 'string'
@@ -172,6 +185,20 @@ const AdminDashboard = () => {
         };
         const action = finalExp.id ? (d: any) => updateWorkExperience(finalExp.id!, d) : addWorkExperience;
         handleSave(action, finalExp, setEditingWorkExperience, 'work experience');
+    };
+    
+    const handleEpisodeChange = (index: number, field: 'title' | 'content', value: string) => {
+        if (!editingWriting || !Array.isArray(editingWriting.content)) return;
+        const updatedEpisodes = [...editingWriting.content];
+        updatedEpisodes[index] = { ...updatedEpisodes[index], [field]: value, id: updatedEpisodes[index]?.id || `temp-${Date.now()}` };
+        setEditingWriting({ ...editingWriting, content: updatedEpisodes });
+    };
+
+    const addEpisode = () => {
+        if (!editingWriting) return;
+        const currentEpisodes = Array.isArray(editingWriting.content) ? editingWriting.content : [];
+        const newEpisode: Episode = { id: `temp-${Date.now()}`, episodeNumber: currentEpisodes.length + 1, title: '', content: '' };
+        setEditingWriting({ ...editingWriting, content: [...currentEpisodes, newEpisode] });
     };
 
     const TabButton: React.FC<{tab: AdminTab, children: React.ReactNode}> = ({tab, children}) => (
@@ -187,7 +214,7 @@ const AdminDashboard = () => {
                 <TabButton tab="Projects">Projects</TabButton>
                 <TabButton tab="Literature">Literature</TabButton>
                 <TabButton tab="Professional">Professional</TabButton>
-                <TabButton tab="Inbox">Inbox {unreadMessagesCount > 0 && `(${unreadMessagesCount})`}</TabButton>
+                <TabButton tab="Inbox">Inbox {unreadMessagesCount > 0 && <span className="ml-2 bg-red-500 text-white text-xs font-bold rounded-full px-2 py-1">{unreadMessagesCount}</span>}</TabButton>
                 <TabButton tab="Settings">Settings</TabButton>
             </div>
             <div>
@@ -197,9 +224,40 @@ const AdminDashboard = () => {
                         <FormField label="Title" name="title" value={editingProject.title || ''} onChange={(e) => handleFormChange(e, setEditingProject)} />
                         <FormField label="Description" name="description" value={editingProject.description || ''} onChange={(e) => handleFormChange(e, setEditingProject)} type="textarea" />
                         <div><label className="block text-sm font-medium text-gray-300">Images</label><input type="file" multiple accept="image/*" onChange={(e) => handleFileUpload(e, 'project-images', setEditingProject, 'images', true)} className="mt-1 block w-full text-sm text-gray-400 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-primary-accent file:text-white hover:file:bg-opacity-80" /><div className="mt-2 flex gap-2 flex-wrap">{editingProject.images?.map((img, i) => <img key={i} src={img} alt="project" className="w-24 h-24 object-cover rounded" />)}</div></div>
+                        <FormField label="Demo Video URL" name="demoVideoUrl" value={editingProject.demoVideoUrl || ''} onChange={(e) => handleFormChange(e, setEditingProject)} required={false} />
+                        <FormField label="Detailed PDF URL" name="pdfUrl" value={editingProject.pdfUrl || ''} onChange={(e) => handleFormChange(e, setEditingProject)} required={false} />
                         <div className="flex space-x-4"><button type="submit" disabled={isSubmitting} className="bg-primary-accent text-white font-bold py-2 px-4 rounded">Save</button><button type="button" onClick={() => setEditingProject(null)} className="bg-gray-500 text-white font-bold py-2 px-4 rounded">Cancel</button></div>
                     </form>
                 ) : <CrudSection title="Engineering Projects" items={projects} onDelete={(id) => handleDelete(deleteProject, id, 'project')} setEditingItem={setEditingProject} renderItem={(item) => <p>{item.title}</p>} isSubmitting={isSubmitting}/>)}
+
+                {activeTab === 'Literature' && (editingWriting ? (
+                     <form onSubmit={(e) => { e.preventDefault(); const action = editingWriting.id ? (d: any) => updateWriting(editingWriting.id!, d) : addWriting; handleSave(action, editingWriting, setEditingWriting, 'writing'); }} className="bg-slate-800 p-6 rounded-lg space-y-4">
+                        <h2 className="text-2xl font-bold mb-4">{editingWriting.id ? 'Edit' : 'Add'} Literary Work</h2>
+                        <FormField label="Title" name="title" value={editingWriting.title || ''} onChange={e => handleFormChange(e, setEditingWriting)} />
+                        <FormField label="Category" name="category" value={editingWriting.category || ''} onChange={e => handleFormChange(e, setEditingWriting)} type="select" options={Object.values(WritingCategory)} />
+                        <FormField label="Genre" name="genre" value={editingWriting.genre || ''} onChange={e => handleFormChange(e, setEditingWriting)} type="select" options={Object.values(WritingGenre)} />
+                        <div><label className="block text-sm font-medium text-gray-300">Cover Image</label><input type="file" accept="image/*" onChange={(e) => handleFileUpload(e, 'writing-covers', setEditingWriting, 'coverImageUrl')} className="mt-1 block w-full text-sm text-gray-400 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-primary-accent file:text-white hover:file:bg-opacity-80" />{editingWriting.coverImageUrl && <img src={editingWriting.coverImageUrl} alt="cover" className="w-24 h-36 object-cover rounded mt-2" />}</div>
+                        <FormField label="Summary" name="summary" value={editingWriting.summary || ''} onChange={e => handleFormChange(e, setEditingWriting)} type="textarea" />
+                        {editingWriting.category === WritingCategory.Novel ? (
+                            <div>
+                                <h3 className="text-xl font-bold mt-6 mb-4">Episodes</h3>
+                                <div className="space-y-4">
+                                    {(Array.isArray(editingWriting.content) ? editingWriting.content : []).map((ep, index) => (
+                                        <div key={ep.id} className="bg-slate-700 p-4 rounded">
+                                            <FormField label={`Episode ${index + 1} Title`} name={`ep-title-${index}`} value={ep.title} onChange={e => handleEpisodeChange(index, 'title', e.target.value)} />
+                                            <FormField label="Content" name={`ep-content-${index}`} value={ep.content} onChange={e => handleEpisodeChange(index, 'content', e.target.value)} type="textarea" rows={10} />
+                                        </div>
+                                    ))}
+                                </div>
+                                <button type="button" onClick={addEpisode} className="mt-4 bg-blue-600 text-white font-bold py-2 px-4 rounded">Add Episode</button>
+                            </div>
+                        ) : (
+                             <FormField label="Content" name="content" value={typeof editingWriting.content === 'string' ? editingWriting.content : ''} onChange={e => handleFormChange(e, setEditingWriting)} type="textarea" rows={15} />
+                        )}
+                        <FormField label="YouTube Audiobook URL" name="youtubeAudiobookUrl" value={editingWriting.youtubeAudiobookUrl || ''} onChange={e => handleFormChange(e, setEditingWriting)} required={false} />
+                        <div className="flex space-x-4"><button type="submit" className="bg-primary-accent text-white font-bold py-2 px-4 rounded">Save</button><button type="button" onClick={() => setEditingWriting(null)} className="bg-gray-500 text-white font-bold py-2 px-4 rounded">Cancel</button></div>
+                    </form>
+                ) : <CrudSection title="Literary Works" items={writings} onDelete={(id) => handleDelete(deleteWriting, id, 'literary work')} setEditingItem={setEditingWriting} renderItem={(item) => <p>{item.title} <span className="text-sm text-gray-400">({item.category})</span></p>} isSubmitting={isSubmitting}/>)}
 
                 {activeTab === 'Professional' && (
                     <div>
@@ -210,9 +268,91 @@ const AdminDashboard = () => {
                                 <FormField label="Company" name="company" value={editingWorkExperience.company || ''} onChange={e => handleFormChange(e, setEditingWorkExperience)} />
                                 <FormField label="Period" name="period" value={editingWorkExperience.period || ''} onChange={e => handleFormChange(e, setEditingWorkExperience)} />
                                 <FormField label="Description (one point per line)" name="description" value={Array.isArray(editingWorkExperience.description) ? editingWorkExperience.description.join('\n') : editingWorkExperience.description || ''} onChange={e => handleFormChange(e, setEditingWorkExperience)} type="textarea" />
-                                <div className="flex space-x-4"><button type="submit" className="bg-primary-accent text-white font-bold py-2 px-4 rounded">Save</button><button type="button" onClick={() => setEditingWorkExperience(null)} className="bg-gray-500 text-white font-bold py-2 px-4 rounded">Cancel</button></div>
+                                <div className="flex space-x-4"><button type="submit" disabled={isSubmitting} className="bg-primary-accent text-white font-bold py-2 px-4 rounded">Save</button><button type="button" onClick={() => setEditingWorkExperience(null)} className="bg-gray-500 text-white font-bold py-2 px-4 rounded">Cancel</button></div>
                             </form>
                         ) : ( <CrudSection title="Work Experience" items={workExperience} onDelete={(id) => handleDelete(deleteWorkExperience, id, 'work experience')} setEditingItem={setEditingWorkExperience} renderItem={(item) => <p>{item.role} at {item.company}</p>} isSubmitting={isSubmitting} /> )}
+                        
+                        {editingEducation ? (
+                            <form onSubmit={(e) => { e.preventDefault(); const action = editingEducation.id ? (d: any) => updateEducation(editingEducation.id!, d) : addEducation; handleSave(action, editingEducation, setEditingEducation, 'education'); }} className="bg-slate-800 p-6 rounded-lg space-y-4 mb-8">
+                                <h2 className="text-2xl font-bold mb-4">{editingEducation.id ? 'Edit' : 'Add'} Education</h2>
+                                <FormField label="Degree" name="degree" value={editingEducation.degree || ''} onChange={e => handleFormChange(e, setEditingEducation)} />
+                                <FormField label="Institution" name="institution" value={editingEducation.institution || ''} onChange={e => handleFormChange(e, setEditingEducation)} />
+                                <FormField label="Period" name="period" value={editingEducation.period || ''} onChange={e => handleFormChange(e, setEditingEducation)} />
+                                <FormField label="Details" name="details" value={editingEducation.details || ''} onChange={e => handleFormChange(e, setEditingEducation)} type="textarea" />
+                                <div className="flex space-x-4"><button type="submit" disabled={isSubmitting} className="bg-primary-accent text-white font-bold py-2 px-4 rounded">Save</button><button type="button" onClick={() => setEditingEducation(null)} className="bg-gray-500 text-white font-bold py-2 px-4 rounded">Cancel</button></div>
+                            </form>
+                        ) : ( <CrudSection title="Education" items={education} onDelete={(id) => handleDelete(deleteEducation, id, 'education')} setEditingItem={setEditingEducation} renderItem={(item) => <p>{item.degree} from {item.institution}</p>} isSubmitting={isSubmitting} /> )}
+
+                        {editingCertificate ? (
+                             <form onSubmit={(e) => { e.preventDefault(); const action = editingCertificate.id ? (d: any) => updateCertificate(editingCertificate.id!, d) : addCertificate; handleSave(action, editingCertificate, setEditingCertificate, 'certificate'); }} className="bg-slate-800 p-6 rounded-lg space-y-4">
+                                <h2 className="text-2xl font-bold mb-4">{editingCertificate.id ? 'Edit' : 'Add'} Certificate</h2>
+                                <FormField label="Name" name="name" value={editingCertificate.name || ''} onChange={e => handleFormChange(e, setEditingCertificate)} />
+                                <FormField label="Issuer" name="issuer" value={editingCertificate.issuer || ''} onChange={e => handleFormChange(e, setEditingCertificate)} />
+                                <FormField label="Date" name="date" value={editingCertificate.date || ''} onChange={e => handleFormChange(e, setEditingCertificate)} />
+                                <FormField label="Credential URL" name="credentialUrl" value={editingCertificate.credentialUrl || ''} onChange={e => handleFormChange(e, setEditingCertificate)} required={false} />
+                                <div className="flex space-x-4"><button type="submit" disabled={isSubmitting} className="bg-primary-accent text-white font-bold py-2 px-4 rounded">Save</button><button type="button" onClick={() => setEditingCertificate(null)} className="bg-gray-500 text-white font-bold py-2 px-4 rounded">Cancel</button></div>
+                            </form>
+                        ) : ( <CrudSection title="Certificates" items={certificates} onDelete={(id) => handleDelete(deleteCertificate, id, 'certificate')} setEditingItem={setEditingCertificate} renderItem={(item) => <p>{item.name} from {item.issuer}</p>} isSubmitting={isSubmitting} /> )}
+                    </div>
+                )}
+                
+                {activeTab === 'Inbox' && (
+                    <section className="bg-slate-800 p-6 rounded-lg">
+                        <h2 className="text-2xl font-bold mb-6">Inbox</h2>
+                        <div className="space-y-4">
+                            {messages.map(msg => (
+                                <div key={msg.id} className={`p-4 rounded border-l-4 ${msg.read ? 'bg-slate-700 border-slate-600' : 'bg-indigo-900/50 border-indigo-500'}`}>
+                                    <div className="flex justify-between items-start">
+                                        <div>
+                                            <p className="font-bold text-white">{msg.name} <span className="font-normal text-gray-400">&lt;{msg.email}&gt;</span></p>
+                                            <p className="text-gray-300 mt-2">{msg.message}</p>
+                                            <p className="text-xs text-gray-500 mt-2">{new Date(msg.timestamp).toLocaleString()}</p>
+                                        </div>
+                                        <div className="flex items-center gap-4">
+                                            {!msg.read && <button onClick={async () => { await markMessageAsRead(msg.id); await refetchAllData(); }} className="text-sm text-green-400 hover:underline">Mark as Read</button>}
+                                            <button onClick={() => handleDelete(deleteMessage, msg.id, 'message')}><FiTrash2 className="text-red-500 hover:text-red-400" /></button>
+                                        </div>
+                                    </div>
+                                </div>
+                            ))}
+                            {messages.length === 0 && <p className="text-gray-400">Your inbox is empty.</p>}
+                        </div>
+                    </section>
+                )}
+
+                {activeTab === 'Settings' && (
+                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                        <section className="bg-slate-800 p-6 rounded-lg space-y-4">
+                            <h2 className="text-2xl font-bold mb-4">General Settings</h2>
+                             <div className="flex items-center justify-between"><label htmlFor="commentsEnabled" className="text-gray-300">Enable Comments</label><input type="checkbox" id="commentsEnabled" name="commentsEnabled" checked={currentSettings.commentsEnabled} onChange={handleSettingsChange} className="h-6 w-6 rounded text-primary-accent bg-slate-700 border-slate-600 focus:ring-primary-accent" /></div>
+                             <div className="flex items-center justify-between"><label htmlFor="ratingsEnabled" className="text-gray-300">Enable Ratings</label><input type="checkbox" id="ratingsEnabled" name="ratingsEnabled" checked={currentSettings.ratingsEnabled} onChange={handleSettingsChange} className="h-6 w-6 rounded text-primary-accent bg-slate-700 border-slate-600 focus:ring-primary-accent" /></div>
+                             <FormField label="Hero Title" name="heroSection.title" value={currentSettings.heroSection.title} onChange={handleSettingsChange} />
+                             <FormField label="Hero Subtitle" name="heroSection.subtitle" value={currentSettings.heroSection.subtitle} onChange={handleSettingsChange} />
+                             <FormField label="Footer Copyright" name="footerContent.copyright" value={currentSettings.footerContent.copyright} onChange={handleSettingsChange} />
+                             <button onClick={saveSettings} disabled={isSubmitting} className="bg-primary-accent text-white font-bold py-2 px-4 rounded w-full mt-4">Save General Settings</button>
+                        </section>
+                        <section className="bg-slate-800 p-6 rounded-lg space-y-4">
+                            <h2 className="text-2xl font-bold mb-4">About Me & Contact</h2>
+                             <FormField label="Full Name" name="aboutMe.name" value={currentSettings.aboutMe.name} onChange={handleSettingsChange} />
+                             <div><label className="block text-sm font-medium text-gray-300">Profile Photo</label><input type="file" accept="image/*" onChange={(e) => handleFileUpload(e, 'profile-photos', setCurrentSettings, 'aboutMe.photoUrl')} className="mt-1 block w-full text-sm text-gray-400 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-primary-accent file:text-white hover:file:bg-opacity-80" />{currentSettings.aboutMe.photoUrl && <img src={currentSettings.aboutMe.photoUrl} alt="profile" className="w-24 h-24 rounded-full object-cover mt-2" />}</div>
+                             <FormField label="Bio" name="aboutMe.bio" value={currentSettings.aboutMe.bio} onChange={handleSettingsChange} type="textarea" />
+                             <FormField label="CV Professional Summary" name="aboutMe.professionalSummary" value={currentSettings.aboutMe.professionalSummary} onChange={handleSettingsChange} type="textarea" />
+                             <FormField label="Email" name="contactDetails.email" value={currentSettings.contactDetails.email} onChange={handleSettingsChange} type="email" />
+                             <FormField label="Phone" name="contactDetails.phone" value={currentSettings.contactDetails.phone} onChange={handleSettingsChange} />
+                             <FormField label="Facebook URL" name="contactDetails.facebook" value={currentSettings.contactDetails.facebook} onChange={handleSettingsChange} />
+                             <FormField label="LinkedIn URL" name="contactDetails.linkedin" value={currentSettings.contactDetails.linkedin} onChange={handleSettingsChange} />
+                             <FormField label="Location" name="contactDetails.location" value={currentSettings.contactDetails.location} onChange={handleSettingsChange} />
+                             <button onClick={saveSettings} disabled={isSubmitting} className="bg-primary-accent text-white font-bold py-2 px-4 rounded w-full mt-4">Save Personal Info</button>
+                        </section>
+                         <section className="bg-slate-800 p-6 rounded-lg lg:col-span-2">
+                             <h2 className="text-2xl font-bold mb-4">Security</h2>
+                             <form onSubmit={handlePasswordSave} className="space-y-4">
+                                <FormField label="New Password" name="newPassword" type="password" value={passwordFields.newPassword} onChange={e => setPasswordFields({...passwordFields, newPassword: e.target.value})} />
+                                <FormField label="Confirm New Password" name="confirmPassword" type="password" value={passwordFields.confirmPassword} onChange={e => setPasswordFields({...passwordFields, confirmPassword: e.target.value})} />
+                                {passwordMessage.text && <p className={passwordMessage.type === 'error' ? 'text-red-500' : 'text-green-400'}>{passwordMessage.text}</p>}
+                                <button type="submit" disabled={isSubmitting} className="bg-yellow-600 text-white font-bold py-2 px-4 rounded">Update Password</button>
+                             </form>
+                         </section>
                     </div>
                 )}
             </div>

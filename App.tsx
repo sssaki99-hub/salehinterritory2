@@ -42,6 +42,26 @@ const fallbackSettings: AdminSettings = {
   }
 };
 
+// Helper function for deep merging, ensuring fallback structure is maintained
+const mergeSettings = (dbSettings: Partial<AdminSettings> | null, fallback: AdminSettings): AdminSettings => {
+    const merged = { ...fallback };
+    if (!dbSettings) return merged;
+
+    for (const key in fallback) {
+        const k = key as keyof AdminSettings;
+        if (dbSettings[k] !== null && dbSettings[k] !== undefined) {
+            // If the property is a nested object, merge its properties instead of overwriting the whole object
+            if (typeof fallback[k] === 'object' && !Array.isArray(fallback[k]) && fallback[k] !== null) {
+                merged[k] = { ...(fallback[k] as object), ...(dbSettings[k] as object) } as any;
+            } else {
+                merged[k] = dbSettings[k] as any;
+            }
+        }
+    }
+    return merged;
+};
+
+
 const App: React.FC = () => {
   const location = useLocation();
   const [isAdmin, setIsAdmin] = useState(false);
@@ -72,7 +92,9 @@ const App: React.FC = () => {
       setEducation(educationData);
       setCertificates(certificatesData);
       setMessages(messagesData);
-      if (settingsData) setSettings(settingsData);
+      
+      // Use the robust merge function to guarantee settings structure
+      setSettings(mergeSettings(settingsData, fallbackSettings));
 
     } catch (error) {
       console.error("Failed to fetch data:", error);

@@ -4,7 +4,9 @@ import { Link } from 'react-router-dom';
 import { AdminContext } from '../contexts/AdminContext';
 
 const Literature: React.FC = () => {
-  const { writings } = useContext(AdminContext)!;
+  const adminContext = useContext(AdminContext);
+  if (!adminContext) return null;
+  const { writings } = adminContext;
 
   return (
     <PageWrapper>
@@ -16,7 +18,7 @@ const Literature: React.FC = () => {
           {writings.map(writing => (
               <div key={writing.id} className="card-glass rounded-lg overflow-hidden shadow-lg shadow-primary-accent/10 group glow-on-hover">
                   <div className="relative">
-                      <img src={writing.coverImage} alt={writing.title} className="w-full h-96 object-cover" />
+                      <img src={writing.coverImageUrl} alt={writing.title} className="w-full h-96 object-cover" />
                       <div className="absolute inset-0 bg-black/50 group-hover:bg-black/70 transition-all duration-300 flex flex-col justify-end p-6">
                           <div className="flex gap-2 mb-2">
                             <span className="inline-block bg-primary-accent/80 text-white text-xs font-bold px-2 py-1 rounded">{writing.category}</span>

@@ -38,7 +38,7 @@ export interface Writing {
   id: string;
   title: string;
   category: WritingCategory;
-  coverImage: string;
+  coverImageUrl: string;
   summary: string;
   genre: WritingGenre;
   youtubeAudiobookUrl?: string;

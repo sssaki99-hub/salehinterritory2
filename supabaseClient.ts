@@ -8,7 +8,6 @@ import { Project, Writing, WorkExperience, Education, Certificate, Message, Comm
 -- Run this SQL in your Supabase project's SQL Editor to create the necessary tables.
 -- Make sure to enable Row Level Security (RLS) on all tables and define policies.
 
--- PROJECTS TABLE
 CREATE TABLE projects (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   created_at TIMESTAMPTZ DEFAULT now(),
@@ -19,20 +18,18 @@ CREATE TABLE projects (
   pdf_url TEXT
 );
 
--- WRITINGS TABLE
 CREATE TABLE writings (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   created_at TIMESTAMPTZ DEFAULT now(),
   title TEXT NOT NULL,
   category TEXT NOT NULL,
-  cover_image TEXT,
+  cover_image_url TEXT,
   summary TEXT,
   genre TEXT,
   youtube_audiobook_url TEXT,
   content JSONB
 );
 
--- WORK EXPERIENCE TABLE
 CREATE TABLE work_experience (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   created_at TIMESTAMPTZ DEFAULT now(),
@@ -42,7 +39,6 @@ CREATE TABLE work_experience (
   description TEXT[]
 );
 
--- EDUCATION TABLE
 CREATE TABLE education (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   created_at TIMESTAMPTZ DEFAULT now(),
@@ -52,7 +48,6 @@ CREATE TABLE education (
   details TEXT
 );
 
--- CERTIFICATES TABLE
 CREATE TABLE certificates (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   created_at TIMESTAMPTZ DEFAULT now(),
@@ -62,7 +57,6 @@ CREATE TABLE certificates (
   credential_url TEXT
 );
 
--- MESSAGES TABLE
 CREATE TABLE messages (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   created_at TIMESTAMPTZ DEFAULT now(),
@@ -72,7 +66,6 @@ CREATE TABLE messages (
   read BOOLEAN DEFAULT false
 );
 
--- COMMENTS TABLE
 CREATE TABLE comments (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   created_at TIMESTAMPTZ DEFAULT now(),
@@ -83,7 +76,6 @@ CREATE TABLE comments (
   CONSTRAINT chk_post_id CHECK (num_nonnulls(project_id, writing_id) = 1)
 );
 
--- RATINGS TABLE
 CREATE TABLE ratings (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   created_at TIMESTAMPTZ DEFAULT now(),
@@ -93,7 +85,6 @@ CREATE TABLE ratings (
   CONSTRAINT chk_post_id CHECK (num_nonnulls(project_id, writing_id) = 1)
 );
 
--- SETTINGS TABLE
 CREATE TABLE settings (
   id INT PRIMARY KEY DEFAULT 1,
   comments_enabled BOOLEAN DEFAULT true,
@@ -104,27 +95,50 @@ CREATE TABLE settings (
   contact_details JSONB,
   CONSTRAINT single_row_constraint CHECK (id = 1)
 );
--- Initialize the settings row
 INSERT INTO settings (id) VALUES (1);
-
-
--- STORAGE BUCKETS
--- In the Supabase dashboard, create the following storage buckets and set them to public:
--- 1. 'project-images'
--- 2. 'writing-covers'
--- 3. 'profile-photos'
 */
 // =================================================================================
 
-// --- 1. SETUP CLIENT ---
+// --- 1. UTILITIES for case conversion ---
+const toCamel = (s: string) => s.replace(/([-_][a-z])/ig, ($1) => $1.toUpperCase().replace('-', '').replace('_', ''));
+const toSnake = (s: string) => s.replace(/[A-Z]/g, letter => `_${letter.toLowerCase()}`);
+
+const isObject = (o: any) => o === Object(o) && !Array.isArray(o) && typeof o !== 'function';
+
+const keysToCamel = (o: any): any => {
+    if (isObject(o)) {
+        const n: {[key: string]: any} = {};
+        Object.keys(o).forEach((k) => {
+            n[toCamel(k)] = keysToCamel(o[k]);
+        });
+        return n;
+    } else if (Array.isArray(o)) {
+        return o.map((i) => keysToCamel(i));
+    }
+    return o;
+};
+
+const keysToSnake = (o: any): any => {
+    if (isObject(o)) {
+        const n: {[key:string]: any} = {};
+        Object.keys(o).forEach((k) => {
+            n[toSnake(k)] = keysToSnake(o[k]);
+        });
+        return n;
+    } else if (Array.isArray(o)) {
+        return o.map((i) => keysToSnake(i));
+    }
+    return o;
+};
+
+// --- 2. SETUP CLIENT ---
 const supabaseUrl = 'https://yqdhrcoznwvwniotkrdl.supabase.co';
 const supabaseAnonKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InlxZGhyY296bnd2d25pb3RrcmRsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjE5MjM2MTQsImV4cCI6MjA3NzQ5OTYxNH0.DybouxggzS4shwXozDl7Niop0dIkL5HCc92-NAytEIg';
 
 export const supabase = createClient(supabaseUrl, supabaseAnonKey);
 
-// --- 2. AUTHENTICATION ---
+// --- 3. AUTHENTICATION ---
 export const signInAdmin = async (password: string) => {
-    // Using a hardcoded email for password-only login
     const email = 'admin@territory.local';
     const { data, error } = await supabase.auth.signInWithPassword({ email, password });
     if (error) throw new Error(`Authentication failed: ${error.message}`);
@@ -148,7 +162,7 @@ export const updateUserPassword = async (password: string) => {
     if (error) throw error;
 };
 
-// --- 3. FILE STORAGE ---
+// --- 4. FILE STORAGE ---
 export const uploadFile = async (bucket: string, file: File): Promise<string> => {
     const filePath = `${Date.now()}-${file.name.replace(/\s/g, '-')}`;
     const { error } = await supabase.storage.from(bucket).upload(filePath, file);
@@ -157,18 +171,24 @@ export const uploadFile = async (bucket: string, file: File): Promise<string> =>
     return data.publicUrl;
 };
 
-// --- 4. DATA FETCHING ---
-export const getProjects = async (): Promise<Project[]> => (await supabase.from('projects').select('*, comments(*), ratings(value)').order('created_at', { ascending: false })).data || [];
-export const getWritings = async (): Promise<Writing[]> => (await supabase.from('writings').select('*, comments(*), ratings(value)').order('created_at', { ascending: false })).data || [];
-export const getWorkExperience = async (): Promise<WorkExperience[]> => (await supabase.from('work_experience').select('*').order('created_at')).data || [];
-export const getEducation = async (): Promise<Education[]> => (await supabase.from('education').select('*').order('created_at')).data || [];
-export const getCertificates = async (): Promise<Certificate[]> => (await supabase.from('certificates').select('*').order('created_at')).data || [];
-export const getMessages = async (): Promise<Message[]> => (await supabase.from('messages').select('*').order('created_at', { ascending: false })).data || [];
-export const getSettings = async (): Promise<AdminSettings | null> => (await supabase.from('settings').select('*').eq('id', 1).single()).data;
+// --- 5. DATA FETCHING (Wrapped with keysToCamel) ---
+const fetchData = async (query: any) => {
+    const { data, error } = await query;
+    if (error) throw error;
+    return keysToCamel(data);
+};
 
-// --- 5. DATA MUTATION ---
-const addItem = async (table: string, item: object) => { const { error } = await supabase.from(table).insert([item]); if (error) throw error; };
-const updateItem = async (table: string, id: string, updates: object) => { const { error } = await supabase.from(table).update(updates).eq('id', id); if (error) throw error; };
+export const getProjects = async (): Promise<Project[]> => fetchData(supabase.from('projects').select('*, comments(*), ratings(value)').order('created_at', { ascending: false }));
+export const getWritings = async (): Promise<Writing[]> => fetchData(supabase.from('writings').select('*, comments(*), ratings(value)').order('created_at', { ascending: false }));
+export const getWorkExperience = async (): Promise<WorkExperience[]> => fetchData(supabase.from('work_experience').select('*').order('created_at'));
+export const getEducation = async (): Promise<Education[]> => fetchData(supabase.from('education').select('*').order('created_at'));
+export const getCertificates = async (): Promise<Certificate[]> => fetchData(supabase.from('certificates').select('*').order('created_at'));
+export const getMessages = async (): Promise<Message[]> => fetchData(supabase.from('messages').select('*').order('created_at', { ascending: false }));
+export const getSettings = async (): Promise<AdminSettings | null> => fetchData(supabase.from('settings').select('*').eq('id', 1).single());
+
+// --- 6. DATA MUTATION (Wrapped with keysToSnake) ---
+const addItem = async (table: string, item: object) => { const { error } = await supabase.from(table).insert([keysToSnake(item)]); if (error) throw error; };
+const updateItem = async (table: string, id: string, updates: object) => { const { error } = await supabase.from(table).update(keysToSnake(updates)).eq('id', id); if (error) throw error; };
 const deleteItem = async (table: string, id: string) => { const { error } = await supabase.from(table).delete().eq('id', id); if (error) throw error; };
 
 export const addProject = (p: Omit<Project, 'id'|'comments'|'ratings'>) => addItem('projects', p);
@@ -195,7 +215,13 @@ export const addMessage = (m: Omit<Message, 'id'|'timestamp'|'read'>) => addItem
 export const deleteMessage = (id: string) => deleteItem('messages', id);
 export const markMessageAsRead = (id: string) => updateItem('messages', id, { read: true });
 
-export const addComment = (c: Omit<Comment, 'id'|'timestamp'>, postId: string, type: 'project'|'writing') => addItem('comments', { ...c, project_id: type === 'project' ? postId : null, writing_id: type === 'writing' ? postId : null });
-export const addRating = (r: Rating, postId: string, type: 'project'|'writing') => addItem('ratings', { ...r, project_id: type === 'project' ? postId : null, writing_id: type === 'writing' ? postId : null });
+export const addComment = (c: Omit<Comment, 'id'|'timestamp'>, postId: string, type: 'project'|'writing') => {
+    const payload = { ...c, projectId: type === 'project' ? postId : null, writingId: type === 'writing' ? postId : null };
+    return addItem('comments', payload);
+};
+export const addRating = (r: Rating, postId: string, type: 'project'|'writing') => {
+    const payload = { ...r, projectId: type === 'project' ? postId : null, writingId: type === 'writing' ? postId : null };
+    return addItem('ratings', payload);
+};
 
-export const updateSettings = async (s: Partial<AdminSettings>) => { const { error } = await supabase.from('settings').update(s).eq('id', 1); if (error) throw error; };
+export const updateSettings = async (s: Partial<AdminSettings>) => updateItem('settings', '1', s);
