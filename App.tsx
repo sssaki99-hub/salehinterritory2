@@ -15,8 +15,8 @@ import Professional from './pages/Professional';
 import Contact from './pages/Contact';
 import Admin from './pages/Admin';
 import { AdminContext } from './contexts/AdminContext';
-import { Project, Writing, WorkExperience, Education, Certificate, Message, AdminSettings } from './types';
-import { getProjects, getWritings, getWorkExperience, getEducation, getCertificates, getMessages, getSettings, onAuthChange } from './supabaseClient';
+import { Project, Writing, WorkExperience, Education, Certificate, Message, AdminSettings, Skill } from './types';
+import { getProjects, getWritings, getWorkExperience, getEducation, getCertificates, getMessages, getSettings, onAuthChange, getSkills } from './supabaseClient';
 
 const fallbackSettings: AdminSettings = {
   commentsEnabled: true,
@@ -72,6 +72,7 @@ const App: React.FC = () => {
   const [workExperience, setWorkExperience] = useState<WorkExperience[]>([]);
   const [education, setEducation] = useState<Education[]>([]);
   const [certificates, setCertificates] = useState<Certificate[]>([]);
+  const [skills, setSkills] = useState<Skill[]>([]);
   const [messages, setMessages] = useState<Message[]>([]);
   const [settings, setSettings] = useState<AdminSettings>(fallbackSettings);
   const [loading, setLoading] = useState(true);
@@ -81,10 +82,10 @@ const App: React.FC = () => {
       setLoading(true);
       const [
         projectsData, writingsData, workExperienceData, educationData,
-        certificatesData, messagesData, settingsData
+        certificatesData, messagesData, settingsData, skillsData
       ] = await Promise.all([
         getProjects(), getWritings(), getWorkExperience(), getEducation(),
-        getCertificates(), getMessages(), getSettings()
+        getCertificates(), getMessages(), getSettings(), getSkills()
       ]);
       
       setProjects(projectsData);
@@ -92,14 +93,23 @@ const App: React.FC = () => {
       setWorkExperience(workExperienceData);
       setEducation(educationData);
       setCertificates(certificatesData);
+      setSkills(skillsData);
       setMessages(messagesData);
       
-      // Use the robust merge function to guarantee settings structure
       setSettings(mergeSettings(settingsData, fallbackSettings));
 
-    } catch (error) {
-      console.error("Failed to fetch data:", error);
-      alert("Could not connect to the database. Please ensure you have run the SQL schema in your Supabase project.");
+    } catch (error: any) {
+      // Improved error logging to be more descriptive than "[object Object]"
+      let errorMessage = "An unknown error occurred.";
+      if (typeof error === 'object' && error !== null) {
+        // Use the error message if available, otherwise stringify the object
+        errorMessage = error.message || JSON.stringify(error, null, 2);
+      } else {
+        errorMessage = String(error);
+      }
+      
+      console.error("Failed to fetch data:", error); // Log the original error object
+      alert(`Could not connect to the database. Please ensure your schema is up to date.\n\nError: ${errorMessage}`);
     } finally {
       setLoading(false);
     }
@@ -111,8 +121,6 @@ const App: React.FC = () => {
       setIsAdmin(!!session);
     });
     return () => {
-      // The object returned by onAuthStateChange has a data property containing the subscription
-      // FIX: Correctly access the subscription object via `authListener.data.subscription` to unsubscribe.
       authListener.data.subscription.unsubscribe();
     };
   }, [fetchAllData]);
@@ -127,9 +135,10 @@ const App: React.FC = () => {
     workExperience,
     education,
     certificates,
+    skills,
     messages,
     refetchAllData: fetchAllData
-  }), [isAdmin, settings, projects, writings, workExperience, education, certificates, messages, fetchAllData]);
+  }), [isAdmin, settings, projects, writings, workExperience, education, certificates, skills, messages, fetchAllData]);
 
   return (
     <AdminContext.Provider value={adminContextValue}>

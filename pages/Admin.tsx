@@ -1,7 +1,7 @@
 import React, { useState, useContext, ChangeEvent, FormEvent } from 'react';
 import PageWrapper from '../components/PageWrapper';
 import { AdminContext } from '../contexts/AdminContext';
-import { Project, Writing, WorkExperience, Education, Certificate, WritingGenre, WritingCategory, Episode, AdminSettings } from '../types';
+import { Project, Writing, WorkExperience, Education, Certificate, WritingGenre, WritingCategory, Episode, AdminSettings, Skill } from '../types';
 import { FiLogOut, FiTrash2 } from 'react-icons/fi';
 import {
     signInAdmin, signOutAdmin, updateUserPassword,
@@ -10,6 +10,7 @@ import {
     addWorkExperience, updateWorkExperience, deleteWorkExperience,
     addEducation, updateEducation, deleteEducation,
     addCertificate, updateCertificate, deleteCertificate,
+    addSkill, updateSkill, deleteSkill,
     deleteMessage, markMessageAsRead,
     updateSettings, uploadFile
 } from '../supabaseClient';
@@ -58,7 +59,7 @@ const CrudSection: React.FC<{ title: string; items: any[]; onDelete: (id: string
 const AdminDashboard = () => {
     const adminContext = useContext(AdminContext);
     if (!adminContext) return null;
-    const { settings, setSettings, refetchAllData, messages, projects, writings, workExperience, education, certificates } = adminContext;
+    const { settings, setSettings, refetchAllData, messages, projects, writings, workExperience, education, certificates, skills } = adminContext;
     
     const [activeTab, setActiveTab] = useState<AdminTab>('Projects');
     const [isSubmitting, setIsSubmitting] = useState(false);
@@ -68,6 +69,7 @@ const AdminDashboard = () => {
     const [editingWorkExperience, setEditingWorkExperience] = useState<Partial<WorkExperience> | null>(null);
     const [editingEducation, setEditingEducation] = useState<Partial<Education> | null>(null);
     const [editingCertificate, setEditingCertificate] = useState<Partial<Certificate> | null>(null);
+    const [editingSkill, setEditingSkill] = useState<Partial<Skill> | null>(null);
     const [currentSettings, setCurrentSettings] = useState<AdminSettings>(settings);
     const [passwordFields, setPasswordFields] = useState({ newPassword: '', confirmPassword: '' });
     const [passwordMessage, setPasswordMessage] = useState({ type: '', text: '' });
@@ -261,7 +263,7 @@ const AdminDashboard = () => {
 
                 {activeTab === 'Professional' && (
                     <div>
-                        {editingWorkExperience ? (
+                        {editingWorkExperience && (
                              <form onSubmit={handleWorkExperienceSave} className="bg-slate-800 p-6 rounded-lg space-y-4 mb-8">
                                 <h2 className="text-2xl font-bold mb-4">{editingWorkExperience.id ? 'Edit' : 'Add'} Work Experience</h2>
                                 <FormField label="Role" name="role" value={editingWorkExperience.role || ''} onChange={e => handleFormChange(e, setEditingWorkExperience)} />
@@ -270,10 +272,21 @@ const AdminDashboard = () => {
                                 <FormField label="Description (one point per line)" name="description" value={Array.isArray(editingWorkExperience.description) ? editingWorkExperience.description.join('\n') : editingWorkExperience.description || ''} onChange={e => handleFormChange(e, setEditingWorkExperience)} type="textarea" />
                                 <div className="flex space-x-4"><button type="submit" disabled={isSubmitting} className="bg-primary-accent text-white font-bold py-2 px-4 rounded">Save</button><button type="button" onClick={() => setEditingWorkExperience(null)} className="bg-gray-500 text-white font-bold py-2 px-4 rounded">Cancel</button></div>
                             </form>
-                        ) : ( <CrudSection title="Work Experience" items={workExperience} onDelete={(id) => handleDelete(deleteWorkExperience, id, 'work experience')} setEditingItem={setEditingWorkExperience} renderItem={(item) => <p>{item.role} at {item.company}</p>} isSubmitting={isSubmitting} /> )}
+                        )}
+                        <CrudSection title="Work Experience" items={workExperience} onDelete={(id) => handleDelete(deleteWorkExperience, id, 'work experience')} setEditingItem={setEditingWorkExperience} renderItem={(item) => <p>{item.role} at {item.company}</p>} isSubmitting={isSubmitting} />
                         
-                        {editingEducation ? (
-                            <form onSubmit={(e) => { e.preventDefault(); const action = editingEducation.id ? (d: any) => updateEducation(editingEducation.id!, d) : addEducation; handleSave(action, editingEducation, setEditingEducation, 'education'); }} className="bg-slate-800 p-6 rounded-lg space-y-4 mb-8">
+                        {editingSkill && (
+                             <form onSubmit={(e) => { e.preventDefault(); const action = editingSkill.id ? (d: any) => updateSkill(editingSkill.id!, d) : addSkill; handleSave(action, editingSkill, setEditingSkill, 'skill'); }} className="bg-slate-800 p-6 rounded-lg space-y-4 my-8">
+                                <h2 className="text-2xl font-bold mb-4">{editingSkill.id ? 'Edit' : 'Add'} Skill</h2>
+                                <FormField label="Skill Name" name="name" value={editingSkill.name || ''} onChange={e => handleFormChange(e, setEditingSkill)} />
+                                <FormField label="Category" name="category" value={editingSkill.category || ''} onChange={e => handleFormChange(e, setEditingSkill)} />
+                                <div className="flex space-x-4"><button type="submit" disabled={isSubmitting} className="bg-primary-accent text-white font-bold py-2 px-4 rounded">Save</button><button type="button" onClick={() => setEditingSkill(null)} className="bg-gray-500 text-white font-bold py-2 px-4 rounded">Cancel</button></div>
+                            </form>
+                        )}
+                        <CrudSection title="Skills" items={skills} onDelete={(id) => handleDelete(deleteSkill, id, 'skill')} setEditingItem={setEditingSkill} renderItem={(item) => <p>{item.name} <span className="text-sm text-gray-400">({item.category})</span></p>} isSubmitting={isSubmitting} />
+                        
+                        {editingEducation && (
+                            <form onSubmit={(e) => { e.preventDefault(); const action = editingEducation.id ? (d: any) => updateEducation(editingEducation.id!, d) : addEducation; handleSave(action, editingEducation, setEditingEducation, 'education'); }} className="bg-slate-800 p-6 rounded-lg space-y-4 my-8">
                                 <h2 className="text-2xl font-bold mb-4">{editingEducation.id ? 'Edit' : 'Add'} Education</h2>
                                 <FormField label="Degree" name="degree" value={editingEducation.degree || ''} onChange={e => handleFormChange(e, setEditingEducation)} />
                                 <FormField label="Institution" name="institution" value={editingEducation.institution || ''} onChange={e => handleFormChange(e, setEditingEducation)} />
@@ -281,10 +294,11 @@ const AdminDashboard = () => {
                                 <FormField label="Details" name="details" value={editingEducation.details || ''} onChange={e => handleFormChange(e, setEditingEducation)} type="textarea" />
                                 <div className="flex space-x-4"><button type="submit" disabled={isSubmitting} className="bg-primary-accent text-white font-bold py-2 px-4 rounded">Save</button><button type="button" onClick={() => setEditingEducation(null)} className="bg-gray-500 text-white font-bold py-2 px-4 rounded">Cancel</button></div>
                             </form>
-                        ) : ( <CrudSection title="Education" items={education} onDelete={(id) => handleDelete(deleteEducation, id, 'education')} setEditingItem={setEditingEducation} renderItem={(item) => <p>{item.degree} from {item.institution}</p>} isSubmitting={isSubmitting} /> )}
+                        )}
+                        <CrudSection title="Education" items={education} onDelete={(id) => handleDelete(deleteEducation, id, 'education')} setEditingItem={setEditingEducation} renderItem={(item) => <p>{item.degree} from {item.institution}</p>} isSubmitting={isSubmitting} />
 
-                        {editingCertificate ? (
-                             <form onSubmit={(e) => { e.preventDefault(); const action = editingCertificate.id ? (d: any) => updateCertificate(editingCertificate.id!, d) : addCertificate; handleSave(action, editingCertificate, setEditingCertificate, 'certificate'); }} className="bg-slate-800 p-6 rounded-lg space-y-4">
+                        {editingCertificate && (
+                             <form onSubmit={(e) => { e.preventDefault(); const action = editingCertificate.id ? (d: any) => updateCertificate(editingCertificate.id!, d) : addCertificate; handleSave(action, editingCertificate, setEditingCertificate, 'certificate'); }} className="bg-slate-800 p-6 rounded-lg space-y-4 my-8">
                                 <h2 className="text-2xl font-bold mb-4">{editingCertificate.id ? 'Edit' : 'Add'} Certificate</h2>
                                 <FormField label="Name" name="name" value={editingCertificate.name || ''} onChange={e => handleFormChange(e, setEditingCertificate)} />
                                 <FormField label="Issuer" name="issuer" value={editingCertificate.issuer || ''} onChange={e => handleFormChange(e, setEditingCertificate)} />
@@ -292,7 +306,8 @@ const AdminDashboard = () => {
                                 <FormField label="Credential URL" name="credentialUrl" value={editingCertificate.credentialUrl || ''} onChange={e => handleFormChange(e, setEditingCertificate)} required={false} />
                                 <div className="flex space-x-4"><button type="submit" disabled={isSubmitting} className="bg-primary-accent text-white font-bold py-2 px-4 rounded">Save</button><button type="button" onClick={() => setEditingCertificate(null)} className="bg-gray-500 text-white font-bold py-2 px-4 rounded">Cancel</button></div>
                             </form>
-                        ) : ( <CrudSection title="Certificates" items={certificates} onDelete={(id) => handleDelete(deleteCertificate, id, 'certificate')} setEditingItem={setEditingCertificate} renderItem={(item) => <p>{item.name} from {item.issuer}</p>} isSubmitting={isSubmitting} /> )}
+                        )}
+                        <CrudSection title="Certificates" items={certificates} onDelete={(id) => handleDelete(deleteCertificate, id, 'certificate')} setEditingItem={setEditingCertificate} renderItem={(item) => <p>{item.name} from {item.issuer}</p>} isSubmitting={isSubmitting} />
                     </div>
                 )}
                 

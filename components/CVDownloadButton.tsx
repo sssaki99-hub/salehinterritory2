@@ -1,5 +1,6 @@
 import React, { useContext, useState } from 'react';
 import { AdminContext } from '../contexts/AdminContext';
+import { Skill } from '../types';
 
 // Make sure jsPDF is available in the global scope
 declare const jspdf: any;
@@ -20,7 +21,7 @@ const CVDownloadButton: React.FC = () => {
             return;
         }
 
-        const { settings, workExperience, education, certificates, projects } = adminContext;
+        const { settings, workExperience, education, certificates, projects, skills } = adminContext;
         const { name, professionalSummary, photoUrl } = settings.aboutMe;
         const { email, phone, linkedin, location } = settings.contactDetails;
         
@@ -31,17 +32,13 @@ const CVDownloadButton: React.FC = () => {
         const contentWidth = page_width - leftMargin - rightMargin;
 
         // --- Header ---
-        // Add Photo
         try {
             const img = new Image();
-            img.crossOrigin = "anonymous"; // Add this to handle CORS for external URLs
+            img.crossOrigin = "anonymous";
             img.src = photoUrl;
             await new Promise(resolve => {
                 img.onload = resolve;
-                img.onerror = () => {
-                    console.error("Image failed to load for PDF");
-                    resolve(null); // Resolve anyway to not block PDF generation
-                };
+                img.onerror = () => { console.error("Image failed to load for PDF"); resolve(null); };
             });
             if (img.complete && img.naturalHeight !== 0) {
                  doc.addImage(img, 'JPEG', page_width - rightMargin - 40, 15, 40, 40);
@@ -58,16 +55,15 @@ const CVDownloadButton: React.FC = () => {
         doc.setFontSize(10);
         doc.setFont('helvetica', 'normal');
         const contactInfo = [email, phone, linkedin, location].filter(Boolean).join(' | ');
-        const contactLines = doc.splitTextToSize(contactInfo, contentWidth - 50); // leave space for photo
+        const contactLines = doc.splitTextToSize(contactInfo, contentWidth - 50);
         doc.text(contactLines, leftMargin, yPos);
-        yPos += (contactLines.length * 5) + 15; // Extra space to clear photo
+        yPos += (contactLines.length * 5) + 15;
         
-        // --- Separator ---
-        doc.setDrawColor(99, 102, 241); // Primary Accent Color (indigo-500)
+        doc.setDrawColor(99, 102, 241);
         doc.line(leftMargin, yPos, leftMargin + contentWidth, yPos);
         yPos += 10;
         
-        // --- About Me / Professional Summary ---
+        // --- About Me ---
         doc.setFontSize(14);
         doc.setFont('helvetica', 'bold');
         doc.text('About Me', leftMargin, yPos);
@@ -102,6 +98,35 @@ const CVDownloadButton: React.FC = () => {
                 yPos += 4;
             });
         }
+        
+        // --- Skills ---
+        if(skills.length > 0) {
+            doc.setFontSize(14);
+            doc.setFont('helvetica', 'bold');
+            doc.text('Skills', leftMargin, yPos);
+            yPos += 7;
+
+            const groupedSkills = skills.reduce((acc, skill) => {
+                const { category } = skill;
+                if (!acc[category]) acc[category] = [];
+                acc[category].push(skill.name);
+                return acc;
+            }, {} as Record<string, string[]>);
+
+            doc.setFontSize(11);
+            Object.entries(groupedSkills).forEach(([category, skillList]) => {
+                doc.setFont('helvetica', 'bold');
+                doc.text(category, leftMargin, yPos);
+                yPos += 6;
+
+                doc.setFont('helvetica', 'normal');
+                const skillsLine = skillList.join(', ');
+                const skillLines = doc.splitTextToSize(skillsLine, contentWidth);
+                doc.text(skillLines, leftMargin, yPos);
+                yPos += (skillLines.length * 5) + 2;
+            });
+             yPos += 5;
+        }
 
         // --- Key Projects ---
         if (projects.length > 0) {
@@ -111,7 +136,7 @@ const CVDownloadButton: React.FC = () => {
             yPos += 7;
 
             doc.setFontSize(11);
-            projects.slice(0, 3).forEach(project => { // Show top 3 projects
+            projects.slice(0, 3).forEach(project => {
                 doc.setFont('helvetica', 'bold');
                 doc.text(project.title, leftMargin, yPos);
                 yPos += 6;
@@ -142,7 +167,6 @@ const CVDownloadButton: React.FC = () => {
                 yPos += (detailLines.length * 5) + 5;
             });
         }
-
 
         // --- Certificates ---
         if(certificates.length > 0) {

@@ -1,3 +1,4 @@
+
 import React, { useContext } from 'react';
 import { motion } from 'framer-motion';
 import { AdminContext } from '../contexts/AdminContext';
@@ -6,8 +7,9 @@ import CVDownloadButton from '../components/CVDownloadButton';
 
 const Home: React.FC = () => {
   const adminContext = useContext(AdminContext);
-  const heroSection = adminContext?.settings.heroSection;
-  const aboutMe = adminContext?.settings.aboutMe;
+  if (!adminContext) return null;
+  const { settings } = adminContext;
+  const { heroSection, aboutMe } = settings;
 
   return (
     <PageWrapper>

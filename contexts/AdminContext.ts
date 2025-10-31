@@ -1,5 +1,5 @@
 import { createContext, Dispatch, SetStateAction } from 'react';
-import { Project, Writing, WorkExperience, Education, Certificate, Message, AdminSettings } from '../types';
+import { Project, Writing, WorkExperience, Education, Certificate, Message, AdminSettings, Skill } from '../types';
 
 interface AdminContextType {
   isAdmin: boolean;
@@ -11,6 +11,7 @@ interface AdminContextType {
   workExperience: WorkExperience[];
   education: Education[];
   certificates: Certificate[];
+  skills: Skill[];
   messages: Message[];
   refetchAllData: () => Promise<void>;
 }

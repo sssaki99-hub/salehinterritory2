@@ -1,6 +1,6 @@
 // FIX: Replace incorrect 'AuthSubscription' with the correct 'Subscription' type.
 import { createClient, Session, Subscription } from '@supabase/supabase-js';
-import { Project, Writing, WorkExperience, Education, Certificate, Message, Comment, Rating, AdminSettings } from './types';
+import { Project, Writing, WorkExperience, Education, Certificate, Message, Comment, Rating, AdminSettings, Skill } from './types';
 
 // =================================================================================
 // SUPABASE SQL SCHEMA & POLICIES
@@ -16,6 +16,7 @@ CREATE TABLE IF NOT EXISTS writings ( id UUID PRIMARY KEY DEFAULT gen_random_uui
 CREATE TABLE IF NOT EXISTS work_experience ( id UUID PRIMARY KEY DEFAULT gen_random_uuid(), created_at TIMESTAMPTZ DEFAULT now(), role TEXT NOT NULL, company TEXT NOT NULL, period TEXT NOT NULL, description TEXT[] );
 CREATE TABLE IF NOT EXISTS education ( id UUID PRIMARY KEY DEFAULT gen_random_uuid(), created_at TIMESTAMPTZ DEFAULT now(), degree TEXT NOT NULL, institution TEXT NOT NULL, period TEXT NOT NULL, details TEXT );
 CREATE TABLE IF NOT EXISTS certificates ( id UUID PRIMARY KEY DEFAULT gen_random_uuid(), created_at TIMESTAMPTZ DEFAULT now(), name TEXT NOT NULL, issuer TEXT NOT NULL, date TEXT, credential_url TEXT );
+CREATE TABLE IF NOT EXISTS skills ( id UUID PRIMARY KEY DEFAULT gen_random_uuid(), created_at TIMESTAMPTZ DEFAULT now(), name TEXT NOT NULL, category TEXT NOT NULL );
 CREATE TABLE IF NOT EXISTS messages ( id UUID PRIMARY KEY DEFAULT gen_random_uuid(), created_at TIMESTAMPTZ DEFAULT now(), name TEXT NOT NULL, email TEXT NOT NULL, message TEXT NOT NULL, read BOOLEAN DEFAULT false );
 CREATE TABLE IF NOT EXISTS comments ( id UUID PRIMARY KEY DEFAULT gen_random_uuid(), created_at TIMESTAMPTZ DEFAULT now(), author TEXT NOT NULL, text TEXT NOT NULL, project_id UUID REFERENCES projects(id) ON DELETE CASCADE, writing_id UUID REFERENCES writings(id) ON DELETE CASCADE, CONSTRAINT chk_post_id CHECK (num_nonnulls(project_id, writing_id) = 1) );
 CREATE TABLE IF NOT EXISTS ratings ( id UUID PRIMARY KEY DEFAULT gen_random_uuid(), created_at TIMESTAMPTZ DEFAULT now(), value INT NOT NULL CHECK (value >= 1 AND value <= 5), project_id UUID REFERENCES projects(id) ON DELETE CASCADE, writing_id UUID REFERENCES writings(id) ON DELETE CASCADE, CONSTRAINT chk_post_id CHECK (num_nonnulls(project_id, writing_id) = 1) );
@@ -30,6 +31,7 @@ ALTER TABLE writings ENABLE ROW LEVEL SECURITY; DROP POLICY IF EXISTS "Allow pub
 ALTER TABLE work_experience ENABLE ROW LEVEL SECURITY; DROP POLICY IF EXISTS "Allow public read access on work_experience" ON work_experience; CREATE POLICY "Allow public read access on work_experience" ON work_experience FOR SELECT USING (true);
 ALTER TABLE education ENABLE ROW LEVEL SECURITY; DROP POLICY IF EXISTS "Allow public read access on education" ON education; CREATE POLICY "Allow public read access on education" ON education FOR SELECT USING (true);
 ALTER TABLE certificates ENABLE ROW LEVEL SECURITY; DROP POLICY IF EXISTS "Allow public read access on certificates" ON certificates; CREATE POLICY "Allow public read access on certificates" ON certificates FOR SELECT USING (true);
+ALTER TABLE skills ENABLE ROW LEVEL SECURITY; DROP POLICY IF EXISTS "Allow public read access on skills" ON skills; CREATE POLICY "Allow public read access on skills" ON skills FOR SELECT USING (true);
 ALTER TABLE comments ENABLE ROW LEVEL SECURITY; DROP POLICY IF EXISTS "Allow public read access on comments" ON comments; CREATE POLICY "Allow public read access on comments" ON comments FOR SELECT USING (true);
 ALTER TABLE ratings ENABLE ROW LEVEL SECURITY; DROP POLICY IF EXISTS "Allow public read access on ratings" ON ratings; CREATE POLICY "Allow public read access on ratings" ON ratings FOR SELECT USING (true);
 ALTER TABLE settings ENABLE ROW LEVEL SECURITY; DROP POLICY IF EXISTS "Allow public read access on settings" ON settings; CREATE POLICY "Allow public read access on settings" ON settings FOR SELECT USING (true);
@@ -126,6 +128,7 @@ export const getWritings = async (): Promise<Writing[]> => fetchData(supabase.fr
 export const getWorkExperience = async (): Promise<WorkExperience[]> => fetchData(supabase.from('work_experience').select('*').order('created_at'));
 export const getEducation = async (): Promise<Education[]> => fetchData(supabase.from('education').select('*').order('created_at'));
 export const getCertificates = async (): Promise<Certificate[]> => fetchData(supabase.from('certificates').select('*').order('created_at'));
+export const getSkills = async (): Promise<Skill[]> => fetchData(supabase.from('skills').select('*').order('category'));
 export const getMessages = async (): Promise<Message[]> => fetchData(supabase.from('messages').select('*').order('created_at', { ascending: false }));
 export const getSettings = async (): Promise<AdminSettings | null> => fetchData(supabase.from('settings').select('*').eq('id', 1).single());
 
@@ -153,6 +156,10 @@ export const deleteEducation = (id: string) => deleteItem('education', id);
 export const addCertificate = (c: Omit<Certificate, 'id'>) => addItem('certificates', c);
 export const updateCertificate = (id: string, u: Partial<Certificate>) => updateItem('certificates', id, u);
 export const deleteCertificate = (id: string) => deleteItem('certificates', id);
+
+export const addSkill = (s: Omit<Skill, 'id'>) => addItem('skills', s);
+export const updateSkill = (id: string, u: Partial<Skill>) => updateItem('skills', id, u);
+export const deleteSkill = (id: string) => deleteItem('skills', id);
 
 export const addMessage = (m: Omit<Message, 'id'|'timestamp'|'read'>) => addItem('messages', m);
 export const deleteMessage = (id: string) => deleteItem('messages', id);

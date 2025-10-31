@@ -78,6 +78,12 @@ export interface Certificate {
     credentialUrl?: string;
 }
 
+export interface Skill {
+  id: string;
+  name: string;
+  category: string;
+}
+
 export interface Message {
     id: string;
     name: string;

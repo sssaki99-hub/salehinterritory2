@@ -1,6 +1,7 @@
 import React, { useContext } from 'react';
 import PageWrapper from '../components/PageWrapper';
 import { AdminContext } from '../contexts/AdminContext';
+import { Skill } from '../types';
 
 const Section: React.FC<{ title: string; children: React.ReactNode }> = ({ title, children }) => (
     <section className="mb-12">
@@ -13,8 +14,17 @@ const Section: React.FC<{ title: string; children: React.ReactNode }> = ({ title
 const Professional: React.FC = () => {
   const adminContext = useContext(AdminContext);
   if (!adminContext) return null;
-  const { workExperience, education, certificates, settings } = adminContext;
+  const { workExperience, education, certificates, skills, settings } = adminContext;
   const fullName = settings?.aboutMe?.name;
+
+  const groupedSkills = skills.reduce((acc, skill) => {
+    const { category } = skill;
+    if (!acc[category]) {
+        acc[category] = [];
+    }
+    acc[category].push(skill);
+    return acc;
+  }, {} as Record<string, Skill[]>);
 
   return (
     <PageWrapper>
@@ -28,40 +38,65 @@ const Professional: React.FC = () => {
       </div>
       
       <div className="max-w-4xl mx-auto">
-        <Section title="Work Experience">
-            <div className="space-y-8">
-                {workExperience.map(exp => (
-                    <div key={exp.id}>
-                        <h3 className="text-xl font-bold text-white">{exp.role}</h3>
-                        <p className="text-indigo-400 font-semibold">{exp.company} | {exp.period}</p>
-                        <ul className="list-disc list-inside text-gray-300 mt-2 space-y-1">
-                            {exp.description.map((d, i) => <li key={i}>{d}</li>)}
-                        </ul>
-                    </div>
-                ))}
-            </div>
-        </Section>
+        {workExperience.length > 0 && (
+          <Section title="Work Experience">
+              <div className="space-y-8">
+                  {workExperience.map(exp => (
+                      <div key={exp.id}>
+                          <h3 className="text-xl font-bold text-white">{exp.role}</h3>
+                          <p className="text-indigo-400 font-semibold">{exp.company} | {exp.period}</p>
+                          <ul className="list-disc list-inside text-gray-300 mt-2 space-y-1">
+                              {exp.description.map((d, i) => <li key={i}>{d}</li>)}
+                          </ul>
+                      </div>
+                  ))}
+              </div>
+          </Section>
+        )}
+        
+        {skills.length > 0 && (
+          <Section title="Skills">
+              <div className="space-y-6">
+                  {Object.entries(groupedSkills).map(([category, skillList]) => (
+                      <div key={category}>
+                          <h3 className="text-xl font-bold text-white mb-3">{category}</h3>
+                          <div className="flex flex-wrap gap-2">
+                              {skillList.map(skill => (
+                                  <span key={skill.id} className="bg-slate-700 text-indigo-300 text-sm font-medium px-3 py-1 rounded-full">
+                                      {skill.name}
+                                  </span>
+                              ))}
+                          </div>
+                      </div>
+                  ))}
+              </div>
+          </Section>
+        )}
 
-        <Section title="Educational Background">
-             {education.map(edu => (
-                <div key={edu.id}>
-                    <h3 className="text-xl font-bold text-white">{edu.degree}</h3>
-                    <p className="text-indigo-400 font-semibold">{edu.institution} | {edu.period}</p>
-                    <p className="text-gray-300 mt-2">{edu.details}</p>
-                </div>
-            ))}
-        </Section>
+        {education.length > 0 && (
+          <Section title="Educational Background">
+              {education.map(edu => (
+                  <div key={edu.id} className="mb-6 last:mb-0">
+                      <h3 className="text-xl font-bold text-white">{edu.degree}</h3>
+                      <p className="text-indigo-400 font-semibold">{edu.institution} | {edu.period}</p>
+                      <p className="text-gray-300 mt-2">{edu.details}</p>
+                  </div>
+              ))}
+          </Section>
+        )}
 
-        <Section title="Certificates">
-            <div className="space-y-4">
-            {certificates.map(cert => (
-                <div key={cert.id}>
-                    <a href={cert.credentialUrl} target="_blank" rel="noopener noreferrer" className="text-xl font-bold text-white hover:text-indigo-400 transition-colors">{cert.name}</a>
-                    <p className="text-gray-400">{cert.issuer} | {cert.date}</p>
-                </div>
-            ))}
-            </div>
-        </Section>
+        {certificates.length > 0 && (
+          <Section title="Certificates">
+              <div className="space-y-4">
+              {certificates.map(cert => (
+                  <div key={cert.id}>
+                      <a href={cert.credentialUrl} target="_blank" rel="noopener noreferrer" className="text-xl font-bold text-white hover:text-indigo-400 transition-colors">{cert.name}</a>
+                      <p className="text-gray-400">{cert.issuer} | {cert.date}</p>
+                  </div>
+              ))}
+              </div>
+          </Section>
+        )}
       </div>
     </PageWrapper>
   );
