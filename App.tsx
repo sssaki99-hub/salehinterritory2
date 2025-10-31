@@ -1,7 +1,7 @@
-
-import React, { useState, useMemo, useEffect } from 'react';
+import React, { useState, useMemo, useEffect, useCallback } from 'react';
 import { Routes, Route, useLocation } from 'react-router-dom';
 import { AnimatePresence } from 'framer-motion';
+import { Session } from '@supabase/supabase-js';
 
 import Header from './components/Header';
 import Footer from './components/Footer';
@@ -15,20 +15,82 @@ import Contact from './pages/Contact';
 import Admin from './pages/Admin';
 import { AdminContext } from './contexts/AdminContext';
 import { Project, Writing, WorkExperience, Education, Certificate, Message, AdminSettings } from './types';
-import { initialProjects, initialWritings, initialWorkExperience, initialEducation, initialCertificates, initialSettings } from './sampleData';
+import { getProjects, getWritings, getWorkExperience, getEducation, getCertificates, getMessages, getSettings, onAuthChange } from './supabaseClient';
+
+const fallbackSettings: AdminSettings = {
+  commentsEnabled: true,
+  ratingsEnabled: true,
+  heroSection: {
+    title: "Welcome to Your Territory",
+    subtitle: "Your portfolio is ready to be set up in the Admin Panel.",
+  },
+  footerContent: {
+    copyright: `© ${new Date().getFullYear()} Salehin's Territory. All Rights Reserved.`,
+  },
+  aboutMe: {
+    name: "S.M. Samius Salehin",
+    photoUrl: "https://via.placeholder.com/400",
+    bio: "Update your bio in the admin panel.",
+    professionalSummary: "Update your professional summary in the admin panel.",
+  },
+  contactDetails: {
+    email: "your-email@example.com",
+    phone: "+1 (000) 000-0000",
+    facebook: "https://facebook.com",
+    linkedin: "https://linkedin.com/in/",
+    location: "Your City, Country",
+  }
+};
 
 const App: React.FC = () => {
   const location = useLocation();
   const [isAdmin, setIsAdmin] = useState(false);
   
-  // Content states
-  const [projects, setProjects] = useState<Project[]>(initialProjects);
-  const [writings, setWritings] = useState<Writing[]>(initialWritings);
-  const [workExperience, setWorkExperience] = useState<WorkExperience[]>(initialWorkExperience);
-  const [education, setEducation] = useState<Education[]>(initialEducation);
-  const [certificates, setCertificates] = useState<Certificate[]>(initialCertificates);
+  const [projects, setProjects] = useState<Project[]>([]);
+  const [writings, setWritings] = useState<Writing[]>([]);
+  const [workExperience, setWorkExperience] = useState<WorkExperience[]>([]);
+  const [education, setEducation] = useState<Education[]>([]);
+  const [certificates, setCertificates] = useState<Certificate[]>([]);
   const [messages, setMessages] = useState<Message[]>([]);
-  const [settings, setSettings] = useState<AdminSettings>(initialSettings);
+  const [settings, setSettings] = useState<AdminSettings>(fallbackSettings);
+  const [loading, setLoading] = useState(true);
+
+  const fetchAllData = useCallback(async () => {
+    try {
+      setLoading(true);
+      const [
+        projectsData, writingsData, workExperienceData, educationData,
+        certificatesData, messagesData, settingsData
+      ] = await Promise.all([
+        getProjects(), getWritings(), getWorkExperience(), getEducation(),
+        getCertificates(), getMessages(), getSettings()
+      ]);
+      
+      setProjects(projectsData);
+      setWritings(writingsData);
+      setWorkExperience(workExperienceData);
+      setEducation(educationData);
+      setCertificates(certificatesData);
+      setMessages(messagesData);
+      if (settingsData) setSettings(settingsData);
+
+    } catch (error) {
+      console.error("Failed to fetch data:", error);
+      alert("Could not connect to the database. Please ensure you have run the SQL schema in your Supabase project.");
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    fetchAllData();
+    const authSubscription = onAuthChange((session: Session | null) => {
+      setIsAdmin(!!session);
+    });
+    return () => {
+      authSubscription.unsubscribe();
+    };
+  }, [fetchAllData]);
 
   const adminContextValue = useMemo(() => ({
     isAdmin,
@@ -36,24 +98,24 @@ const App: React.FC = () => {
     settings,
     setSettings,
     projects,
-    setProjects,
     writings,
-    setWritings,
     workExperience,
-    setWorkExperience,
     education,
-    setEducation,
     certificates,
-    setCertificates,
     messages,
-    setMessages,
-  }), [isAdmin, settings, projects, writings, workExperience, education, certificates, messages]);
+    refetchAllData: fetchAllData
+  }), [isAdmin, settings, projects, writings, workExperience, education, certificates, messages, fetchAllData]);
 
   return (
     <AdminContext.Provider value={adminContextValue}>
       <div className="flex flex-col min-h-screen bg-dark-bg">
         <Header />
         <main className="flex-grow container mx-auto px-4 sm:px-6 lg:px-8 py-8">
+          {loading ? (
+            <div className="flex justify-center items-center h-64">
+              <div className="animate-spin rounded-full h-16 w-16 border-t-2 border-b-2 border-primary-accent"></div>
+            </div>
+          ) : (
             <AnimatePresence mode="wait">
               <Routes location={location} key={location.pathname}>
                 <Route path="/" element={<Home />} />
@@ -66,6 +128,7 @@ const App: React.FC = () => {
                 <Route path="/admin" element={<Admin />} />
               </Routes>
             </AnimatePresence>
+          )}
         </main>
         <Footer />
       </div>

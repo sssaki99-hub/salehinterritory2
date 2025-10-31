@@ -4,10 +4,11 @@ import PageWrapper from '../components/PageWrapper';
 import { AdminContext } from '../contexts/AdminContext';
 import CommentSection from '../components/CommentSection';
 import { Comment, Rating } from '../types';
+import { addComment, addRating } from '../supabaseClient';
 
 const EngineeringDetail: React.FC = () => {
   const { id } = useParams<{ id: string }>();
-  const { projects, setProjects } = useContext(AdminContext)!;
+  const { projects, refetchAllData } = useContext(AdminContext)!;
 
   const project = projects.find(p => p.id === id);
 
@@ -23,22 +24,17 @@ const EngineeringDetail: React.FC = () => {
   }
 
   const handleCommentSubmit = async (newComment: Omit<Comment, 'id' | 'timestamp'>) => {
-    if (!project) return;
-    const commentToAdd: Comment = {
-        ...newComment,
-        id: Date.now().toString(),
-        timestamp: new Date().toISOString()
-    };
-    setProjects(prevProjects => prevProjects.map(p => 
-        p.id === project.id ? { ...p, comments: [...p.comments, commentToAdd] } : p
-    ));
+    try {
+      await addComment(newComment, project.id, 'project');
+      await refetchAllData();
+    } catch (error) { console.error("Failed to submit comment:", error); alert("Error posting comment."); }
   };
   
   const handleRatingSubmit = async (newRating: Rating) => {
-    if (!project) return;
-    setProjects(prevProjects => prevProjects.map(p => 
-        p.id === project.id ? { ...p, ratings: [...p.ratings, newRating] } : p
-    ));
+    try {
+      await addRating(newRating, project.id, 'project');
+      await refetchAllData();
+    } catch (error) { console.error("Failed to submit rating:", error); alert("Error submitting rating."); }
   };
 
   return (

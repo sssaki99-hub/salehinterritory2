@@ -5,12 +5,13 @@ import { AdminContext } from '../contexts/AdminContext';
 import CommentSection from '../components/CommentSection';
 import { Comment, Rating, WritingCategory, Episode } from '../types';
 import { FiChevronLeft, FiChevronRight, FiZoomIn, FiZoomOut } from 'react-icons/fi';
+import { addComment, addRating } from '../supabaseClient';
 
 type FontSize = 'text-base' | 'text-lg' | 'text-xl';
 
 const LiteratureDetail: React.FC = () => {
   const { id } = useParams<{ id: string }>();
-  const { writings, setWritings } = useContext(AdminContext)!;
+  const { writings, refetchAllData } = useContext(AdminContext)!;
   
   const story = writings.find(w => w.id === id);
   
@@ -32,22 +33,17 @@ const LiteratureDetail: React.FC = () => {
   const episodes = isNovel ? (story.content as Episode[]) : [];
 
   const handleCommentSubmit = async (newComment: Omit<Comment, 'id' | 'timestamp'>) => {
-    if (!story) return;
-     const commentToAdd: Comment = {
-        ...newComment,
-        id: Date.now().toString(),
-        timestamp: new Date().toISOString()
-    };
-    setWritings(prev => prev.map(w => 
-        w.id === story.id ? { ...w, comments: [...w.comments, commentToAdd] } : w
-    ));
+    try {
+        await addComment(newComment, story.id, 'writing');
+        await refetchAllData();
+    } catch (error) { console.error("Failed to submit comment:", error); alert("Error posting comment."); }
   };
   
   const handleRatingSubmit = async (newRating: Rating) => {
-    if (!story) return;
-    setWritings(prev => prev.map(w => 
-        w.id === story.id ? { ...w, ratings: [...w.ratings, newRating] } : w
-    ));
+    try {
+        await addRating(newRating, story.id, 'writing');
+        await refetchAllData();
+    } catch (error) { console.error("Failed to submit rating:", error); alert("Error submitting rating."); }
   };
   
   const fontSizes: FontSize[] = ['text-base', 'text-lg', 'text-xl'];
@@ -77,12 +73,12 @@ const LiteratureDetail: React.FC = () => {
         </div>
 
         <div className={`prose prose-invert max-w-none text-gray-300 leading-relaxed select-none ${fontSize} transition-all duration-300`}>
-          {isNovel ? (
+          {isNovel && episodes.length > 0 ? (
               episodes[currentEpisodeIndex]?.content.split('\n\n').map((paragraph, index) => (
                   <p key={index}>{paragraph}</p>
               ))
           ) : (
-              (story.content as string).split('\n\n').map((paragraph, index) => (
+              (story.content as string || '').split('\n\n').map((paragraph, index) => (
                 <p key={index}>{paragraph}</p>
               ))
           )}
