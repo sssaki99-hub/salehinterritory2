@@ -6,13 +6,15 @@ import { FiMail, FiPhone, FiMapPin, FiFacebook, FiLinkedin } from 'react-icons/f
 import { addMessage } from '../supabaseClient';
 
 const Contact: React.FC = () => {
-  const { settings, refetchAllData } = useContext(AdminContext)!;
-  const contactDetails = settings.contactDetails;
-  
+  const adminContext = useContext(AdminContext);
   const [formData, setFormData] = useState({ name: '', email: '', message: '' });
   const [isSubmitted, setIsSubmitted] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState('');
+
+  if (!adminContext) return null;
+  const { settings, refetchAllData } = adminContext;
+  const contactDetails = settings.contactDetails;
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });

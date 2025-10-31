@@ -4,7 +4,9 @@ import PageWrapper from '../components/PageWrapper';
 import { AdminContext } from '../contexts/AdminContext';
 
 const Engineering: React.FC = () => {
-  const { projects } = useContext(AdminContext)!;
+  const adminContext = useContext(AdminContext);
+  if (!adminContext) return null;
+  const { projects } = adminContext;
 
   return (
     <PageWrapper>

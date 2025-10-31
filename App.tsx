@@ -1,3 +1,4 @@
+
 import React, { useState, useMemo, useEffect, useCallback } from 'react';
 import { Routes, Route, useLocation } from 'react-router-dom';
 import { AnimatePresence } from 'framer-motion';
@@ -106,11 +107,13 @@ const App: React.FC = () => {
 
   useEffect(() => {
     fetchAllData();
-    const authSubscription = onAuthChange((session: Session | null) => {
+    const authListener = onAuthChange((session: Session | null) => {
       setIsAdmin(!!session);
     });
     return () => {
-      authSubscription.unsubscribe();
+      // The object returned by onAuthStateChange has a data property containing the subscription
+      // FIX: Correctly access the subscription object via `authListener.data.subscription` to unsubscribe.
+      authListener.data.subscription.unsubscribe();
     };
   }, [fetchAllData]);
 

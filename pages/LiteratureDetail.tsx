@@ -11,12 +11,15 @@ type FontSize = 'text-base' | 'text-lg' | 'text-xl';
 
 const LiteratureDetail: React.FC = () => {
   const { id } = useParams<{ id: string }>();
-  const { writings, refetchAllData } = useContext(AdminContext)!;
-  
-  const story = writings.find(w => w.id === id);
+  const adminContext = useContext(AdminContext);
   
   const [currentEpisodeIndex, setCurrentEpisodeIndex] = useState(0);
   const [fontSize, setFontSize] = useState<FontSize>('text-lg');
+
+  if (!adminContext) return null;
+  const { writings, refetchAllData } = adminContext;
+  
+  const story = writings.find(w => w.id === id);
 
   if (!story) {
     return (
@@ -74,7 +77,7 @@ const LiteratureDetail: React.FC = () => {
 
         <div className={`prose prose-invert max-w-none text-gray-300 leading-relaxed select-none ${fontSize} transition-all duration-300`}>
           {isNovel && episodes.length > 0 ? (
-              episodes[currentEpisodeIndex]?.content.split('\n\n').map((paragraph, index) => (
+              episodes[currentEpisodeIndex]?.content?.split('\n\n').map((paragraph, index) => (
                   <p key={index}>{paragraph}</p>
               ))
           ) : (

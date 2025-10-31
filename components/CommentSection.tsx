@@ -49,9 +49,12 @@ const StarRating: React.FC<{ onRatingSubmit: (rating: Rating) => Promise<void> }
 }
 
 const CommentSection: React.FC<CommentSectionProps> = ({ comments, ratings, onCommentSubmit, onRatingSubmit }) => {
-  const { settings } = useContext(AdminContext)!;
+  const adminContext = useContext(AdminContext);
   const [newComment, setNewComment] = useState({ author: '', text: '' });
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  if (!adminContext) return null;
+  const { settings } = adminContext;
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();

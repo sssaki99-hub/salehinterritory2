@@ -11,7 +11,9 @@ const Section: React.FC<{ title: string; children: React.ReactNode }> = ({ title
 
 
 const Professional: React.FC = () => {
-  const { workExperience, education, certificates, settings } = useContext(AdminContext)!;
+  const adminContext = useContext(AdminContext);
+  if (!adminContext) return null;
+  const { workExperience, education, certificates, settings } = adminContext;
   const fullName = settings?.aboutMe?.name;
 
   return (
@@ -44,7 +46,6 @@ const Professional: React.FC = () => {
              {education.map(edu => (
                 <div key={edu.id}>
                     <h3 className="text-xl font-bold text-white">{edu.degree}</h3>
-                    {/* FIX: Corrected a typo from `exp.period` to `edu.period`. `exp` was out of scope. */}
                     <p className="text-indigo-400 font-semibold">{edu.institution} | {edu.period}</p>
                     <p className="text-gray-300 mt-2">{edu.details}</p>
                 </div>

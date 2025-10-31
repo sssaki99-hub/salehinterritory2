@@ -8,7 +8,9 @@ import { addComment, addRating } from '../supabaseClient';
 
 const EngineeringDetail: React.FC = () => {
   const { id } = useParams<{ id: string }>();
-  const { projects, refetchAllData } = useContext(AdminContext)!;
+  const adminContext = useContext(AdminContext);
+  if (!adminContext) return null;
+  const { projects, refetchAllData } = adminContext;
 
   const project = projects.find(p => p.id === id);
 
