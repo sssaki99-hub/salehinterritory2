@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Salehin's Territory</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700&family=Inter:wght@400;500;700&display=swap" rel="stylesheet">
+    <style>
+      body {
+        background-color: #111827; /* gray-900 */
+        background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='100' height='100' viewBox='0 0 100 100'%3E%3Cg fill='%236366F1' fill-opacity='0.05'%3E%3Cpath d='M11 18c3.866 0 7-3.134 7-7s-3.134-7-7-7-7 3.134-7 7 3.134 7 7 7zM41 38c3.866 0 7-3.134 7-7s-3.134-7-7-7-7 3.134-7 7 3.134 7 7 7zM12 85v-5h10v-5h-10v-5h10v-5h-10v-5h10v-5h-10v-5h10v-5h-10v-5h10v-5h-10v-5h10v-5h-10v-5h10v-5h-10V5h10V0h-10c-1.1045695 0-2 .8954305-2 2v86c0 1.1045695.8954305 2 2 2h10v-5h-10v-5zM22 5h10v5h-10V5zm10 10h10v5h-10v-5zm-10 10h10v5h-10v-5zm10 10h10v5h-10v-5zm-10 10h10v5h-10v-5zm10 10h10v5h-10v-5zm-10 10h10v5h-10v-5zm10 10h10v5h-10v-5zM52 5h10v5h-10V5zm10 10h10v5h-10v-5zm-10 10h10v5h-10v-5zm10 10h10v5h-10v-5zm-10 10h10v5h-10v-5zm10 10h10v5h-10v-5zm-10 10h10v5h-10v-5zm10 10h10v5h-10v-5zM82 5h10v5h-10V5zm10 10h10v5h-10v-5zm-10 10h10v5h-10v-5zm10 10h10v5h-10v-5zm-10 10h10v5h-10v-5zm10 10h10v5h-10v-5zm-10 10h10v5h-10v-5zm10 10h10v5h-10v-5z'/%3E%3C/g%3E%3C/svg%3E");
+      }
+      .glow-on-hover {
+        transition: box-shadow 0.3s ease-in-out, transform 0.3s ease-in-out;
+      }
+      .glow-on-hover:hover {
+        transform: scale(1.03);
+        box-shadow: 0 0 15px 5px rgba(99, 102, 241, 0.4); /* indigo-500 */
+      }
+      .card-glass {
+        background: rgba(31, 41, 55, 0.5); /* gray-800 with 50% opacity */
+        backdrop-filter: blur(10px);
+        --tw-border-opacity: 1;
+        border-color: rgba(255, 255, 255, 0.1);
+        border-width: 1px;
+      }
+    </style>
+    <script>
+      tailwind.config = {
+        theme: {
+          extend: {
+            colors: {
+              'primary-accent': '#6366F1', // indigo-500
+              'dark-bg': '#111827', // gray-900
+            },
+            fontFamily: {
+              'sans': ['Inter', 'sans-serif'],
+              'serif': ['Playfair Display', 'serif'],
+            },
+          },
+        },
+      }
+    </script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+  <script type="importmap">
+{
+  "imports": {
+    "react/": "https://aistudiocdn.com/react@^19.2.0/",
+    "react": "https://aistudiocdn.com/react@^19.2.0",
+    "react-router-dom": "https://aistudiocdn.com/react-router-dom@^7.9.5",
+    "recharts": "https://aistudiocdn.com/recharts@^3.3.0",
+    "framer-motion": "https://aistudiocdn.com/framer-motion@^12.23.24",
+    "react-dom/": "https://aistudiocdn.com/react-dom@^19.2.0/",
+    "react-icons/": "https://aistudiocdn.com/react-icons@^5.5.0/",
+    "@supabase/supabase-js": "https://aistudiocdn.com/@supabase/supabase-js@^2.78.0"
+  }
+}
+</script>
+</head>
+  <body class="bg-dark-bg text-white font-sans">
+    <div id="root"></div>
+    <script type="module" src="/index.tsx"></script>
+  </body>
+</html>
