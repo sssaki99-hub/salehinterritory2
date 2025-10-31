@@ -117,6 +117,14 @@ export interface ContactDetails {
     location: string;
 }
 
+export interface CVSettings {
+  showWorkExperience: boolean;
+  showSkills: boolean;
+  showProjects: boolean;
+  showEducation: boolean;
+  showCertificates: boolean;
+}
+
 export interface AdminSettings {
   commentsEnabled: boolean;
   ratingsEnabled: boolean;
@@ -124,4 +132,5 @@ export interface AdminSettings {
   footerContent: FooterContentSettings;
   aboutMe: AboutMeSettings;
   contactDetails: ContactDetails;
+  cvSettings: CVSettings;
 }

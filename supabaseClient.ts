@@ -20,7 +20,8 @@ CREATE TABLE IF NOT EXISTS skills ( id UUID PRIMARY KEY DEFAULT gen_random_uuid(
 CREATE TABLE IF NOT EXISTS messages ( id UUID PRIMARY KEY DEFAULT gen_random_uuid(), created_at TIMESTAMPTZ DEFAULT now(), name TEXT NOT NULL, email TEXT NOT NULL, message TEXT NOT NULL, read BOOLEAN DEFAULT false );
 CREATE TABLE IF NOT EXISTS comments ( id UUID PRIMARY KEY DEFAULT gen_random_uuid(), created_at TIMESTAMPTZ DEFAULT now(), author TEXT NOT NULL, text TEXT NOT NULL, project_id UUID REFERENCES projects(id) ON DELETE CASCADE, writing_id UUID REFERENCES writings(id) ON DELETE CASCADE, CONSTRAINT chk_post_id CHECK (num_nonnulls(project_id, writing_id) = 1) );
 CREATE TABLE IF NOT EXISTS ratings ( id UUID PRIMARY KEY DEFAULT gen_random_uuid(), created_at TIMESTAMPTZ DEFAULT now(), value INT NOT NULL CHECK (value >= 1 AND value <= 5), project_id UUID REFERENCES projects(id) ON DELETE CASCADE, writing_id UUID REFERENCES writings(id) ON DELETE CASCADE, CONSTRAINT chk_post_id CHECK (num_nonnulls(project_id, writing_id) = 1) );
-CREATE TABLE IF NOT EXISTS settings ( id INT PRIMARY KEY DEFAULT 1, comments_enabled BOOLEAN DEFAULT true, ratings_enabled BOOLEAN DEFAULT true, hero_section JSONB, footer_content JSONB, about_me JSONB, contact_details JSONB, CONSTRAINT single_row_constraint CHECK (id = 1) );
+CREATE TABLE IF NOT EXISTS settings ( id INT PRIMARY KEY DEFAULT 1, comments_enabled BOOLEAN DEFAULT true, ratings_enabled BOOLEAN DEFAULT true, hero_section JSONB, footer_content JSONB, about_me JSONB, contact_details JSONB, cv_settings JSONB, CONSTRAINT single_row_constraint CHECK (id = 1) );
+
 
 -- Insert the initial settings row only if it doesn't exist.
 INSERT INTO settings (id) VALUES (1) ON CONFLICT (id) DO NOTHING;
@@ -111,7 +112,13 @@ export const updateUserPassword = async (password: string) => {
 export const uploadFile = async (bucket: string, file: File): Promise<string> => {
     const filePath = `${Date.now()}-${file.name.replace(/\s/g, '-')}`;
     const { error } = await supabase.storage.from(bucket).upload(filePath, file);
-    if (error) throw new Error(`File upload failed: ${error.message}`);
+    if (error) {
+       let message = `File upload failed: ${error.message}`;
+       if (error.message.includes('security policy')) {
+         message += "\n\nHint: Have you run the STORAGE RLS POLICIES script from supabaseClient.ts in your Supabase SQL Editor?";
+       }
+       throw new Error(message);
+    }
     const { data } = supabase.storage.from(bucket).getPublicUrl(filePath);
     return data.publicUrl;
 };
@@ -137,12 +144,18 @@ const addItem = async (table: string, item: object) => { const { error } = await
 const updateItem = async (table: string, id: string, updates: object) => { const { error } = await supabase.from(table).update(keysToSnake(updates)).eq('id', id); if (error) throw error; };
 const deleteItem = async (table: string, id: string) => { const { error } = await supabase.from(table).delete().eq('id', id); if (error) throw error; };
 
+// Helper to strip read-only joined data before updating
+const cleanForUpdate = (item: any) => {
+    const { comments, ratings, ...cleanedItem } = item;
+    return cleanedItem;
+};
+
 export const addProject = (p: Omit<Project, 'id'|'comments'|'ratings'>) => addItem('projects', p);
-export const updateProject = (id: string, u: Partial<Project>) => updateItem('projects', id, u);
+export const updateProject = (id: string, u: Partial<Project>) => updateItem('projects', id, cleanForUpdate(u));
 export const deleteProject = (id: string) => deleteItem('projects', id);
 
 export const addWriting = (w: Omit<Writing, 'id'|'comments'|'ratings'>) => addItem('writings', w);
-export const updateWriting = (id: string, u: Partial<Writing>) => updateItem('writings', id, u);
+export const updateWriting = (id: string, u: Partial<Writing>) => updateItem('writings', id, cleanForUpdate(u));
 export const deleteWriting = (id: string) => deleteItem('writings', id);
 
 export const addWorkExperience = (e: Omit<WorkExperience, 'id'>) => addItem('work_experience', e);

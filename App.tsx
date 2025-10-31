@@ -40,6 +40,13 @@ const fallbackSettings: AdminSettings = {
     facebook: "https://facebook.com",
     linkedin: "https://linkedin.com/in/",
     location: "Your City, Country",
+  },
+  cvSettings: {
+    showWorkExperience: true,
+    showSkills: true,
+    showProjects: true,
+    showEducation: true,
+    showCertificates: true,
   }
 };
 

@@ -13,7 +13,7 @@ const CVDownloadButton: React.FC = () => {
         setIsLoading(true);
 
         const { jsPDF } = jspdf;
-        const doc = new jsPDF();
+        const doc = new jsPDF({ unit: 'pt', format: 'a4' });
 
         if (!adminContext) {
             console.error("AdminContext is not available");
@@ -24,12 +24,32 @@ const CVDownloadButton: React.FC = () => {
         const { settings, workExperience, education, certificates, projects, skills } = adminContext;
         const { name, professionalSummary, photoUrl } = settings.aboutMe;
         const { email, phone, linkedin, location } = settings.contactDetails;
+        const { cvSettings } = settings;
         
-        let yPos = 20;
-        const leftMargin = 20;
-        const rightMargin = 20;
         const page_width = doc.internal.pageSize.getWidth();
+        const leftMargin = 40;
+        const rightMargin = 40;
         const contentWidth = page_width - leftMargin - rightMargin;
+        let yPos = 60;
+        const lineHeight = 12;
+        const sectionGap = 20;
+        const entryGap = 12;
+        const paraGap = 6;
+
+        const checkPageBreak = (spaceNeeded: number) => {
+            if (yPos + spaceNeeded > doc.internal.pageSize.getHeight() - 50) {
+                doc.addPage();
+                yPos = 50;
+            }
+        };
+        
+        const renderSectionHeader = (title: string) => {
+            checkPageBreak(30);
+            doc.setFontSize(14);
+            doc.setFont('helvetica', 'bold');
+            doc.text(title, leftMargin, yPos);
+            yPos += lineHeight * 1.5;
+        };
 
         // --- Header ---
         try {
@@ -41,71 +61,67 @@ const CVDownloadButton: React.FC = () => {
                 img.onerror = () => { console.error("Image failed to load for PDF"); resolve(null); };
             });
             if (img.complete && img.naturalHeight !== 0) {
-                 doc.addImage(img, 'JPEG', page_width - rightMargin - 40, 15, 40, 40);
+                 doc.addImage(img, 'JPEG', page_width - rightMargin - 60, 50, 60, 60);
             }
         } catch (error) {
             console.error("Error adding image to PDF:", error);
         }
 
-        doc.setFontSize(22);
+        doc.setFontSize(24);
         doc.setFont('helvetica', 'bold');
-        doc.text(name, leftMargin, yPos + 5);
-        yPos += 15;
+        doc.text(name, leftMargin, yPos);
+        yPos += 28;
         
         doc.setFontSize(10);
         doc.setFont('helvetica', 'normal');
         const contactInfo = [email, phone, linkedin, location].filter(Boolean).join(' | ');
-        const contactLines = doc.splitTextToSize(contactInfo, contentWidth - 50);
+        const contactLines = doc.splitTextToSize(contactInfo, contentWidth - 70);
         doc.text(contactLines, leftMargin, yPos);
-        yPos += (contactLines.length * 5) + 15;
+        yPos += (contactLines.length * lineHeight) + sectionGap;
         
-        doc.setDrawColor(99, 102, 241);
-        doc.line(leftMargin, yPos, leftMargin + contentWidth, yPos);
-        yPos += 10;
+        doc.setDrawColor(99, 102, 241); // primary-accent
+        doc.setLineWidth(1);
+        doc.line(leftMargin, yPos - (sectionGap / 2), contentWidth + leftMargin, yPos - (sectionGap / 2));
         
         // --- About Me ---
-        doc.setFontSize(14);
-        doc.setFont('helvetica', 'bold');
-        doc.text('About Me', leftMargin, yPos);
-        yPos += 7;
-
-        doc.setFontSize(11);
+        renderSectionHeader('About Me');
+        doc.setFontSize(10);
         doc.setFont('helvetica', 'normal');
         const summaryLines = doc.splitTextToSize(professionalSummary, contentWidth);
+        checkPageBreak(summaryLines.length * lineHeight);
         doc.text(summaryLines, leftMargin, yPos);
-        yPos += (summaryLines.length * 5) + 5; 
+        yPos += (summaryLines.length * lineHeight) + sectionGap; 
 
         // --- Work Experience ---
-        if(workExperience.length > 0) {
-            doc.setFontSize(14);
-            doc.setFont('helvetica', 'bold');
-            doc.text('Work Experience', leftMargin, yPos);
-            yPos += 7;
-            
-            doc.setFontSize(11);
-            workExperience.forEach(exp => {
+        if(cvSettings.showWorkExperience && workExperience.length > 0) {
+            renderSectionHeader('Work Experience');
+            doc.setFontSize(10);
+            workExperience.forEach((exp, index) => {
                 doc.setFont('helvetica', 'bold');
-                doc.text(`${exp.role} at ${exp.company}`, leftMargin, yPos);
+                const roleText = `${exp.role} at ${exp.company}`;
+                const periodText = exp.period;
+                const roleLines = doc.splitTextToSize(roleText, contentWidth - 80); // leave space for period
+                
+                checkPageBreak(roleLines.length * lineHeight + 10);
+                doc.text(roleLines, leftMargin, yPos);
                 doc.setFont('helvetica', 'normal');
-                doc.text(exp.period, doc.internal.pageSize.getWidth() - rightMargin, yPos, { align: 'right' });
-                yPos += 6;
+                doc.text(periodText, page_width - rightMargin, yPos, { align: 'right' });
+                yPos += (roleLines.length * lineHeight) + paraGap;
                 
                 exp.description.forEach(desc => {
-                    const descLines = doc.splitTextToSize(`- ${desc}`, contentWidth - 4);
-                    doc.text(descLines, leftMargin + 4, yPos);
-                    yPos += (descLines.length * 5);
+                    const descLines = doc.splitTextToSize(`- ${desc}`, contentWidth - 10);
+                    checkPageBreak(descLines.length * lineHeight);
+                    doc.text(descLines, leftMargin + 10, yPos);
+                    yPos += (descLines.length * lineHeight);
                 });
-                yPos += 4;
+                if (index < workExperience.length - 1) yPos += entryGap;
             });
+            yPos += sectionGap;
         }
         
         // --- Skills ---
-        if(skills.length > 0) {
-            doc.setFontSize(14);
-            doc.setFont('helvetica', 'bold');
-            doc.text('Skills', leftMargin, yPos);
-            yPos += 7;
-
+        if(cvSettings.showSkills && skills.length > 0) {
+            renderSectionHeader('Skills');
             const groupedSkills = skills.reduce((acc, skill) => {
                 const { category } = skill;
                 if (!acc[category]) acc[category] = [];
@@ -113,77 +129,78 @@ const CVDownloadButton: React.FC = () => {
                 return acc;
             }, {} as Record<string, string[]>);
 
-            doc.setFontSize(11);
+            doc.setFontSize(10);
             Object.entries(groupedSkills).forEach(([category, skillList]) => {
                 doc.setFont('helvetica', 'bold');
+                checkPageBreak(lineHeight * 2);
                 doc.text(category, leftMargin, yPos);
-                yPos += 6;
+                yPos += lineHeight + 2;
 
                 doc.setFont('helvetica', 'normal');
                 const skillsLine = skillList.join(', ');
                 const skillLines = doc.splitTextToSize(skillsLine, contentWidth);
+                checkPageBreak(skillLines.length * lineHeight);
                 doc.text(skillLines, leftMargin, yPos);
-                yPos += (skillLines.length * 5) + 2;
+                yPos += (skillLines.length * lineHeight) + paraGap;
             });
-             yPos += 5;
+             yPos += sectionGap;
         }
 
-        // --- Key Projects ---
-        if (projects.length > 0) {
-            doc.setFontSize(14);
-            doc.setFont('helvetica', 'bold');
-            doc.text('Key Projects', leftMargin, yPos);
-            yPos += 7;
-
-            doc.setFontSize(11);
-            projects.slice(0, 3).forEach(project => {
-                doc.setFont('helvetica', 'bold');
-                doc.text(project.title, leftMargin, yPos);
-                yPos += 6;
-
-                doc.setFont('helvetica', 'normal');
-                const descLines = doc.splitTextToSize(project.description, contentWidth);
-                doc.text(descLines, leftMargin, yPos);
-                yPos += (descLines.length * 5) + 4;
+        // --- Key Projects (Titles Only) ---
+        if (cvSettings.showProjects && projects.length > 0) {
+            renderSectionHeader('Key Projects');
+            doc.setFontSize(10);
+            doc.setFont('helvetica', 'normal');
+            projects.slice(0, 5).forEach(project => {
+                const projectTitleLines = doc.splitTextToSize(`- ${project.title}`, contentWidth - 10);
+                checkPageBreak(projectTitleLines.length * lineHeight);
+                doc.text(projectTitleLines, leftMargin + 10, yPos);
+                yPos += (projectTitleLines.length * lineHeight);
             });
+            yPos += sectionGap;
         }
 
         // --- Education ---
-        if(education.length > 0) {
-            doc.setFontSize(14);
-            doc.setFont('helvetica', 'bold');
-            doc.text('Education', leftMargin, yPos);
-            yPos += 7;
-            
-            doc.setFontSize(11);
+        if(cvSettings.showEducation && education.length > 0) {
+            renderSectionHeader('Education');
+            doc.setFontSize(10);
             education.forEach(edu => {
                 doc.setFont('helvetica', 'bold');
-                doc.text(`${edu.degree}, ${edu.institution}`, leftMargin, yPos);
+                const leftText = `${edu.degree}, ${edu.institution}`;
+                const rightText = edu.period;
+                const leftLines = doc.splitTextToSize(leftText, contentWidth - 80);
+                
+                checkPageBreak(leftLines.length * lineHeight + 10);
+                doc.text(leftLines, leftMargin, yPos);
                 doc.setFont('helvetica', 'normal');
-                doc.text(edu.period, doc.internal.pageSize.getWidth() - rightMargin, yPos, { align: 'right' });
-                yPos += 6;
+                doc.text(rightText, page_width - rightMargin, yPos, { align: 'right' });
+                yPos += (leftLines.length * lineHeight) + paraGap;
+
                 const detailLines = doc.splitTextToSize(edu.details, contentWidth);
+                checkPageBreak(detailLines.length * lineHeight);
                 doc.text(detailLines, leftMargin, yPos);
-                yPos += (detailLines.length * 5) + 5;
+                yPos += (detailLines.length * lineHeight) + entryGap;
             });
+            yPos += sectionGap;
         }
 
         // --- Certificates ---
-        if(certificates.length > 0) {
-            doc.setFontSize(14);
-            doc.setFont('helvetica', 'bold');
-            doc.text('Certificates', leftMargin, yPos);
-            yPos += 7;
-            
-            doc.setFontSize(11);
+        if(cvSettings.showCertificates && certificates.length > 0) {
+            renderSectionHeader('Certificates');
+            doc.setFontSize(10);
             certificates.forEach(cert => {
                 doc.setFont('helvetica', 'bold');
-                doc.text(cert.name, leftMargin, yPos);
+                const certNameLines = doc.splitTextToSize(cert.name, contentWidth - 60);
+                checkPageBreak(certNameLines.length * lineHeight + 10);
+                doc.text(certNameLines, leftMargin, yPos);
                 doc.setFont('helvetica', 'normal');
-                doc.text(cert.date, doc.internal.pageSize.getWidth() - rightMargin, yPos, { align: 'right' });
-                yPos += 6;
-                doc.text(`${cert.issuer}`, leftMargin, yPos);
-                yPos += 8;
+                doc.text(cert.date, page_width - rightMargin, yPos, { align: 'right' });
+                yPos += (certNameLines.length * lineHeight) + paraGap;
+
+                const issuerLines = doc.splitTextToSize(cert.issuer, contentWidth);
+                checkPageBreak(issuerLines.length * lineHeight);
+                doc.text(issuerLines, leftMargin, yPos);
+                yPos += (issuerLines.length * lineHeight) + entryGap;
             });
         }
 
