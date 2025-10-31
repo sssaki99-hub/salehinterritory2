@@ -107,7 +107,7 @@ const Contact: React.FC = () => {
               </div>
               {isSubmitted && <p className="text-green-400 text-center mt-4">Thank you for your message! I'll get back to you soon.</p>}
               {error && <p className="text-red-500 text-center mt-4">{error}</p>}
-            </form>
+            </motion.form>
         </div>
       </div>
     </PageWrapper>
