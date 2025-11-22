@@ -137,7 +137,7 @@ const CVDownloadButton: React.FC = () => {
                 yPos += lineHeight + 2;
 
                 doc.setFont('helvetica', 'normal');
-                const skillsLine = skillList.join(', ');
+                const skillsLine = (skillList as string[]).join(', ');
                 const skillLines = doc.splitTextToSize(skillsLine, contentWidth);
                 checkPageBreak(skillLines.length * lineHeight);
                 doc.text(skillLines, leftMargin, yPos);

@@ -1,3 +1,4 @@
+
 // FIX: Replace incorrect 'AuthSubscription' with the correct 'Subscription' type.
 import { createClient, Session, Subscription } from '@supabase/supabase-js';
 import { Project, Writing, WorkExperience, Education, Certificate, Message, Comment, Rating, AdminSettings, Skill } from './types';
@@ -89,6 +90,16 @@ export const signInAdmin = async (password: string) => {
     const email = 'admin@territory.local';
     const { data, error } = await supabase.auth.signInWithPassword({ email, password });
     if (error) throw new Error(`Authentication failed: ${error.message}`);
+    return data;
+};
+
+export const signUpAdmin = async (password: string) => {
+    const email = 'admin@territory.local';
+    const { data, error } = await supabase.auth.signUp({
+        email,
+        password,
+    });
+    if (error) throw new Error(`Sign up failed: ${error.message}`);
     return data;
 };
 

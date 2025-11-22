@@ -1,10 +1,11 @@
+
 import React, { useState, useContext, ChangeEvent, FormEvent } from 'react';
 import PageWrapper from '../components/PageWrapper';
 import { AdminContext } from '../contexts/AdminContext';
 import { Project, Writing, WorkExperience, Education, Certificate, WritingGenre, WritingCategory, Episode, AdminSettings, Skill } from '../types';
 import { FiLogOut, FiTrash2 } from 'react-icons/fi';
 import {
-    signInAdmin, signOutAdmin, updateUserPassword,
+    signInAdmin, signOutAdmin, updateUserPassword, signUpAdmin,
     addProject, updateProject, deleteProject,
     addWriting, updateWriting, deleteWriting,
     addWorkExperience, updateWorkExperience, deleteWorkExperience,
@@ -106,7 +107,7 @@ const AdminDashboard = () => {
         setIsSubmitting(true);
         try {
             if (isMultiple) {
-                const urls = await Promise.all(Array.from(files).map(file => uploadFile(bucket, file)));
+                const urls = await Promise.all((Array.from(files) as File[]).map(file => uploadFile(bucket, file)));
                 setter((prev: any) => ({ ...prev, [fieldName]: [...(prev[fieldName] || []), ...urls] }));
             } else {
                 const url = await uploadFile(bucket, files[0]);
@@ -446,6 +447,19 @@ const Admin: React.FC = () => {
     }
   };
 
+  const handleSignUp = async () => {
+    setError('');
+    setIsSubmitting(true);
+    try {
+        await signUpAdmin(password);
+        alert("Admin account created! You can now login. \n\nNote: If your Supabase project requires email verification, you must verify your email before logging in.");
+    } catch (err: any) {
+        setError(err.message);
+    } finally {
+        setIsSubmitting(false);
+    }
+  };
+
   if (adminContext?.isAdmin) {
     return <PageWrapper><AdminDashboard /></PageWrapper>;
   }
@@ -460,12 +474,19 @@ const Admin: React.FC = () => {
             <input type="password" name="password" id="password" value={password} onChange={(e) => setPassword(e.target.value)} required className="mt-1 block w-full bg-slate-700/50 border border-slate-600 rounded-md shadow-sm py-2 px-3 text-white focus:outline-none focus:ring-primary-accent focus:border-primary-accent"/>
           </div>
           {error && <p className="text-red-500 text-sm">{error}</p>}
-          <div><button type="submit" disabled={isSubmitting} className="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm font-medium text-white bg-primary-accent hover:bg-opacity-80 disabled:bg-gray-500">{isSubmitting ? 'Logging in...' : 'Login'}</button></div>
+          <div className="flex flex-col gap-4">
+            <button type="submit" disabled={isSubmitting} className="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm font-medium text-white bg-primary-accent hover:bg-opacity-80 disabled:bg-gray-500 transition-colors">
+                {isSubmitting ? 'Logging in...' : 'Login'}
+            </button>
+            <button type="button" onClick={handleSignUp} disabled={isSubmitting} className="w-full flex justify-center py-2 px-4 border border-gray-600 rounded-md shadow-sm font-medium text-gray-300 bg-slate-800 hover:bg-slate-700 disabled:bg-gray-500 disabled:cursor-not-allowed transition-colors">
+                Create Account
+            </button>
+          </div>
+          <p className="text-xs text-gray-500 text-center">Default password is 'admin'. If this is your first time, click Create Account.</p>
         </form>
       </div>
     </PageWrapper>
   );
 };
 
-// FIX: Removed extraneous text that was appended to this file causing parsing errors.
 export default Admin;
