@@ -429,7 +429,7 @@ const AdminDashboard = () => {
 };
 
 const Admin: React.FC = () => {
-  const [password, setPassword] = useState('admin');
+  const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const adminContext = useContext(AdminContext);
@@ -438,25 +438,34 @@ const Admin: React.FC = () => {
     e.preventDefault();
     setError('');
     setIsSubmitting(true);
+
+    const FIXED_PASSWORD = 'smss1857';
+
+    if (password !== FIXED_PASSWORD) {
+        setError('Incorrect password.');
+        setIsSubmitting(false);
+        return;
+    }
+
     try {
       await signInAdmin(password);
     } catch (err: any) {
-      setError(err.message || 'Failed to login. Ensure you have created the admin user in Supabase.');
+      // Auto-provisioning: If login fails, try to create the account
+      try {
+          console.log("Login failed, attempting to create admin account...");
+          await signUpAdmin(password);
+          // If signup successful, try signing in again to ensure session is active
+          await signInAdmin(password);
+      } catch (signupErr: any) {
+          console.error("Auto-creation failed:", signupErr);
+          if (err.message.includes("Invalid login credentials")) {
+             setError('Authentication failed. Please ensure the admin account exists and the password is correct.');
+          } else {
+             setError(err.message || 'Failed to login.');
+          }
+      }
     } finally {
       setIsSubmitting(false);
-    }
-  };
-
-  const handleSignUp = async () => {
-    setError('');
-    setIsSubmitting(true);
-    try {
-        await signUpAdmin(password);
-        alert("Admin account created! You can now login. \n\nNote: If your Supabase project requires email verification, you must verify your email before logging in.");
-    } catch (err: any) {
-        setError(err.message);
-    } finally {
-        setIsSubmitting(false);
     }
   };
 
@@ -471,18 +480,23 @@ const Admin: React.FC = () => {
         <form onSubmit={handleLogin} className="space-y-6 card-glass p-8 rounded-lg shadow-lg">
           <div>
             <label htmlFor="password" className="block text-sm font-medium text-gray-300">Password</label>
-            <input type="password" name="password" id="password" value={password} onChange={(e) => setPassword(e.target.value)} required className="mt-1 block w-full bg-slate-700/50 border border-slate-600 rounded-md shadow-sm py-2 px-3 text-white focus:outline-none focus:ring-primary-accent focus:border-primary-accent"/>
+            <input 
+                type="password" 
+                name="password" 
+                id="password" 
+                value={password} 
+                onChange={(e) => setPassword(e.target.value)} 
+                required 
+                className="mt-1 block w-full bg-slate-700/50 border border-slate-600 rounded-md shadow-sm py-2 px-3 text-white focus:outline-none focus:ring-primary-accent focus:border-primary-accent"
+                placeholder="Enter admin password"
+            />
           </div>
           {error && <p className="text-red-500 text-sm">{error}</p>}
-          <div className="flex flex-col gap-4">
+          <div>
             <button type="submit" disabled={isSubmitting} className="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm font-medium text-white bg-primary-accent hover:bg-opacity-80 disabled:bg-gray-500 transition-colors">
-                {isSubmitting ? 'Logging in...' : 'Login'}
-            </button>
-            <button type="button" onClick={handleSignUp} disabled={isSubmitting} className="w-full flex justify-center py-2 px-4 border border-gray-600 rounded-md shadow-sm font-medium text-gray-300 bg-slate-800 hover:bg-slate-700 disabled:bg-gray-500 disabled:cursor-not-allowed transition-colors">
-                Create Account
+                {isSubmitting ? 'Verifying...' : 'Login'}
             </button>
           </div>
-          <p className="text-xs text-gray-500 text-center">Default password is 'admin'. If this is your first time, click Create Account.</p>
         </form>
       </div>
     </PageWrapper>

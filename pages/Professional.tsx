@@ -61,7 +61,7 @@ const Professional: React.FC = () => {
                       <div key={category}>
                           <h3 className="text-xl font-bold text-white mb-3">{category}</h3>
                           <div className="flex flex-wrap gap-2">
-                              {skillList.map(skill => (
+                              {(skillList as Skill[]).map(skill => (
                                   <span key={skill.id} className="bg-slate-700 text-indigo-300 text-sm font-medium px-3 py-1 rounded-full">
                                       {skill.name}
                                   </span>

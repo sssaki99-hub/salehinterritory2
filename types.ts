@@ -1,3 +1,49 @@
+
+// Existing types updated and new types added for complete app functionality
+
+export interface WorkExperience {
+  id?: string;
+  role: string;
+  company: string;
+  location: string;
+  period: string;
+  description: string | string[];
+}
+
+export interface Education {
+  id?: string;
+  degree: string;
+  institution: string;
+  period: string;
+  highlight: string;
+  details?: string;
+  major?: string;
+  board?: string;
+}
+
+export interface Certificate {
+  id: string;
+  name: string;
+  issuer: string;
+  date: string;
+  credentialUrl?: string;
+}
+
+export interface Skill {
+  id: string;
+  name: string;
+  category: string;
+}
+
+export interface Message {
+  id: string;
+  name: string;
+  email: string;
+  message: string;
+  read: boolean;
+  timestamp: string;
+}
+
 export interface Comment {
   id: string;
   author: string;
@@ -9,42 +55,17 @@ export interface Rating {
   value: number;
 }
 
-export interface Project {
-  id: string;
-  title: string;
-  images: string[];
-  description: string;
-  demoVideoUrl?: string;
-  pdfUrl?: string;
-  comments: Comment[];
-  ratings: Rating[];
+export enum WritingCategory {
+  Novel = "Novel",
+  ShortStory = "Short Story",
+  Poem = "Poem"
 }
 
 export enum WritingGenre {
-  SciFi = "Sci-Fi",
+  Horror = "Horror",
   Thriller = "Thriller",
-  Mystery = "Mystery",
-  Romantic = "Romantic",
-  Poetry = "Poetry",
-}
-
-export enum WritingCategory {
-    Novel = "Novel",
-    ShortStory = "Short Story",
-    Poem = "Poem",
-}
-
-export interface Writing {
-  id: string;
-  title: string;
-  category: WritingCategory;
-  coverImageUrl: string;
-  summary: string;
-  genre: WritingGenre;
-  youtubeAudiobookUrl?: string;
-  content: string | Episode[]; // string for poems/short stories, Episode[] for novels
-  comments: Comment[];
-  ratings: Rating[];
+  SciFi = "Science Fiction",
+  Mystery = "Mystery"
 }
 
 export interface Episode {
@@ -54,83 +75,72 @@ export interface Episode {
   content: string;
 }
 
-export interface WorkExperience {
+export interface Writing {
   id: string;
-  role: string;
-  company: string;
-  period: string;
-  description: string[];
-}
-
-export interface Education {
-    id: string;
-    degree: string;
-    institution: string;
-    period: string;
-    details: string;
-}
-
-export interface Certificate {
-    id: string;
-    name: string;
-    issuer: string;
-    date: string;
-    credentialUrl?: string;
-}
-
-export interface Skill {
-  id: string;
-  name: string;
-  category: string;
-}
-
-export interface Message {
-    id: string;
-    name: string;
-    email: string;
-    message: string;
-    timestamp: string;
-    read: boolean;
-}
-
-export interface AboutMeSettings {
-  name: string;
-  photoUrl: string;
-  bio: string;
-  professionalSummary: string;
-}
-
-export interface HeroSectionSettings {
   title: string;
-  subtitle: string;
+  category: WritingCategory;
+  genre: WritingGenre;
+  coverImageUrl: string;
+  summary: string;
+  content: string | Episode[];
+  youtubeAudiobookUrl?: string;
+  comments?: Comment[];
+  ratings?: Rating[];
 }
 
-export interface FooterContentSettings {
-  copyright: string;
+export interface Project {
+  id: string;
+  title: string;
+  description: string;
+  images: string[];
+  demoVideoUrl?: string;
+  pdfUrl?: string;
+  comments?: Comment[];
+  ratings?: Rating[];
 }
 
 export interface ContactDetails {
-    email: string;
-    phone: string;
-    facebook: string;
-    linkedin: string;
-    location: string;
-}
-
-export interface CVSettings {
-  showWorkExperience: boolean;
-  showSkills: boolean;
-  showProjects: boolean;
-  showEducation: boolean;
-  showCertificates: boolean;
+  email: string;
+  phone: string;
+  facebook: string;
+  linkedin: string;
+  youtube: string;
+  location?: string;
 }
 
 export interface AdminSettings {
   commentsEnabled: boolean;
   ratingsEnabled: boolean;
-  heroSection: HeroSectionSettings;
-  footerContent: FooterContentSettings;
-  aboutMe: AboutMeSettings;
+  heroSection: {
+    title: string;
+    subtitle: string;
+  };
+  footerContent: {
+    copyright: string;
+  };
+  aboutMe: {
+    name: string;
+    photoUrl: string;
+    bio: string;
+    professionalSummary: string;
+  };
   contactDetails: ContactDetails;
-  cvSettings: CVSettings;
+  cvSettings: {
+    showWorkExperience: boolean;
+    showSkills: boolean;
+    showProjects: boolean;
+    showEducation: boolean;
+    showCertificates: boolean;
+  };
+}
+
+export interface ProfileData {
+  name: string;
+  photoUrl: string;
+  title: string;
+  bio: string[];
+  employment: WorkExperience[];
+  education: Education[];
+  skills: string[];
+  contact: ContactDetails;
 }
